@@ -28,6 +28,15 @@ describe("signupStudent", () => {
     expect(result.error).toMatch(/already exists/i);
   });
 
+  it("returns a friendly error instead of throwing when user creation fails (e.g. a race on a unique email)", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    (prisma.user.create as any).mockRejectedValue(new Error("unique constraint"));
+
+    const result = await signupStudent({ email: "a@example.test", password: "longenoughpassword1" });
+
+    expect(result).toEqual({ success: false, error: "Something went wrong. Please try again." });
+  });
+
   it("creates a user, a verification token, and sends the verification email", async () => {
     (prisma.user.findUnique as any).mockResolvedValue(null);
     (prisma.user.create as any).mockResolvedValue({ id: "u1", email: "a@example.test" });

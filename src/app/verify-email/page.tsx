@@ -1,38 +1,80 @@
+"use client";
+
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { verifyEmailToken } from "@/lib/auth/verifyEmail";
 
-export default async function VerifyEmailPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ token?: string }>;
-}) {
-  const { token } = await searchParams;
+function VerifyEmailContent() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleVerify() {
+    if (!token) return;
+    setStatus("verifying");
+    try {
+      const result = await verifyEmailToken(token);
+      if (result.success) {
+        setStatus("success");
+      } else {
+        setStatus("error");
+        setError(result.error ?? "This verification link is invalid.");
+      }
+    } catch {
+      setStatus("error");
+      setError("Something went wrong. Please try again.");
+    }
+  }
 
   if (!token) {
+    return <p className="text-slate-600">Check your email for a verification link to activate your account.</p>;
+  }
+
+  if (status === "success") {
     return (
-      <main className="mx-auto max-w-md px-6 py-24 text-center">
-        <p className="text-slate-600">Check your email for a verification link to activate your account.</p>
-      </main>
+      <>
+        <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Email verified!</h1>
+        <Link href="/login" className="text-lavender-dark underline">
+          Log in to continue
+        </Link>
+      </>
     );
   }
 
-  const result = await verifyEmailToken(token);
+  if (status === "error") {
+    return (
+      <>
+        <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Verification failed</h1>
+        <p className="text-slate-600">{error}</p>
+      </>
+    );
+  }
 
   return (
+    <>
+      <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Verify your email</h1>
+      <p className="mb-6 text-slate-600">Click below to confirm your email address and activate your account.</p>
+      <button
+        type="button"
+        onClick={handleVerify}
+        disabled={status === "verifying"}
+        className="rounded-full bg-pink px-6 py-3 font-medium text-white hover:bg-pink-dark disabled:opacity-60"
+      >
+        {status === "verifying" ? "Verifying..." : "Verify my email"}
+      </button>
+    </>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
     <main className="mx-auto max-w-md px-6 py-24 text-center">
-      {result.success ? (
-        <>
-          <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Email verified!</h1>
-          <Link href="/login" className="text-lavender-dark underline">
-            Log in to continue
-          </Link>
-        </>
-      ) : (
-        <>
-          <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Verification failed</h1>
-          <p className="text-slate-600">{result.error}</p>
-        </>
-      )}
+      <Suspense fallback={<p className="text-slate-600">Loading...</p>}>
+        <VerifyEmailContent />
+      </Suspense>
     </main>
   );
 }

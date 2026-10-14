@@ -22,24 +22,28 @@ export async function signupStudent({ email, password }: SignupInput): Promise<S
     return { success: false, error: passwordCheck.reason };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return { success: false, error: "An account with this email already exists." };
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return { success: false, error: "An account with this email already exists." };
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({ data: { email, passwordHash } });
+
+    const token = generateToken();
+    await prisma.verificationToken.create({
+      data: { token, userId: user.id, purpose: "email_verify", expiresAt: tokenExpiryDate(24) },
+    });
+
+    await sendEmail({
+      to: email,
+      subject: "Verify your Study Reminder account",
+      body: `Welcome to Study Reminder! Verify your email here: ${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`,
+    });
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
   }
-
-  const passwordHash = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({ data: { email, passwordHash } });
-
-  const token = generateToken();
-  await prisma.verificationToken.create({
-    data: { token, userId: user.id, purpose: "email_verify", expiresAt: tokenExpiryDate(24) },
-  });
-
-  await sendEmail({
-    to: email,
-    subject: "Verify your Study Reminder account",
-    body: `Welcome to Study Reminder! Verify your email here: ${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`,
-  });
-
-  return { success: true };
 }

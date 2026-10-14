@@ -21,12 +21,17 @@ export default function SignupPage() {
     }
 
     setStatus("submitting");
-    const result = await signupStudent({ email, password });
-    if (result.success) {
-      setStatus("success");
-    } else {
+    try {
+      const result = await signupStudent({ email, password });
+      if (result.success) {
+        setStatus("success");
+      } else {
+        setStatus("error");
+        setError(result.error ?? "Something went wrong. Please try again.");
+      }
+    } catch {
       setStatus("error");
-      setError(result.error ?? "Something went wrong. Please try again.");
+      setError("Something went wrong. Please try again.");
     }
   }
 
