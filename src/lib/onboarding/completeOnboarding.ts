@@ -45,59 +45,67 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
     return { success: false, error: "A guardian name and email are required for students under 18." };
   }
 
-  const profile = await prisma.studentProfile.create({
-    data: {
-      userId: input.userId,
-      name: input.name,
-      dateOfBirth: dob,
-      grade: input.grade,
-      schoolName: input.schoolName,
-      curriculum: input.curriculum,
-      academicYear: input.academicYear,
-      gender: input.gender ?? null,
-      timezone: input.timezone,
-      onboardingCompletedAt: new Date(),
-      subjects: { create: input.subjects.map((name, order) => ({ name, order })) },
-      availabilityWindows: { create: input.availability },
-      reminderPreference: {
-        create: {
-          channel: input.reminderChannel,
-          preferredTimes: JSON.stringify(input.preferredTimes),
-          phone: input.phone ?? null,
+  try {
+    const profile = await prisma.$transaction(async (tx) => {
+      const created = await tx.studentProfile.create({
+        data: {
+          userId: input.userId,
+          name: input.name,
+          dateOfBirth: dob,
+          grade: input.grade,
+          schoolName: input.schoolName,
+          curriculum: input.curriculum,
+          academicYear: input.academicYear,
+          gender: input.gender ?? null,
+          timezone: input.timezone,
+          onboardingCompletedAt: new Date(),
+          subjects: { create: input.subjects.map((name, order) => ({ name, order })) },
+          availabilityWindows: { create: input.availability },
+          reminderPreference: {
+            create: {
+              channel: input.reminderChannel,
+              preferredTimes: JSON.stringify(input.preferredTimes),
+              phone: input.phone ?? null,
+            },
+          },
         },
-      },
-    },
-    include: { subjects: true },
-  });
+        include: { subjects: true },
+      });
 
-  const subjectIdByName = new Map(profile.subjects.map((s: { id: string; name: string }) => [s.name, s.id]));
+      const subjectIdByName = new Map(created.subjects.map((s: { id: string; name: string }) => [s.name, s.id]));
 
-  if (input.timetable.length) {
-    await prisma.timetableEntry.createMany({
-      data: input.timetable.map((t) => ({
-        studentProfileId: profile.id,
-        dayOfWeek: t.dayOfWeek,
-        subjectId: t.subjectName ? subjectIdByName.get(t.subjectName) ?? null : null,
-        startTime: t.startTime,
-        endTime: t.endTime,
-      })),
+      if (input.timetable.length) {
+        await tx.timetableEntry.createMany({
+          data: input.timetable.map((t) => ({
+            studentProfileId: created.id,
+            dayOfWeek: t.dayOfWeek,
+            subjectId: t.subjectName ? subjectIdByName.get(t.subjectName) ?? null : null,
+            startTime: t.startTime,
+            endTime: t.endTime,
+          })),
+        });
+      }
+
+      if (input.goals.length) {
+        await tx.goal.createMany({
+          data: input.goals.map((g) => ({
+            studentProfileId: created.id,
+            subjectId: g.subjectName ? subjectIdByName.get(g.subjectName) ?? null : null,
+            description: g.description,
+            examDate: g.examDate ? new Date(g.examDate) : null,
+          })),
+        });
+      }
+
+      return created;
     });
-  }
 
-  if (input.goals.length) {
-    await prisma.goal.createMany({
-      data: input.goals.map((g) => ({
-        studentProfileId: profile.id,
-        subjectId: g.subjectName ? subjectIdByName.get(g.subjectName) ?? null : null,
-        description: g.description,
-        examDate: g.examDate ? new Date(g.examDate) : null,
-      })),
-    });
-  }
+    if (guardianRequired && input.guardian) {
+      await requestGuardianConsent(profile.id, input.guardian);
+    }
 
-  if (guardianRequired && input.guardian) {
-    await requestGuardianConsent(profile.id, input.guardian);
+    return { success: true, guardianConsentRequired: guardianRequired };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
   }
-
-  return { success: true, guardianConsentRequired: guardianRequired };
 }

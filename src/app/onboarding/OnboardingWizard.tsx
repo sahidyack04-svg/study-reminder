@@ -38,11 +38,16 @@ export function OnboardingWizard({ userId }: { userId: string }) {
   async function handleFinish() {
     setSubmitting(true);
     setError(null);
-    const result = await completeOnboarding({ userId, ...form });
-    if (result.success) {
-      router.push("/dashboard");
-    } else {
-      setError(result.error ?? "Something went wrong.");
+    try {
+      const result = await completeOnboarding({ userId, ...form });
+      if (result.success) {
+        router.push("/dashboard");
+      } else {
+        setError(result.error ?? "Something went wrong.");
+        setSubmitting(false);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
       setSubmitting(false);
     }
   }

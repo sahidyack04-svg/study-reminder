@@ -1,8 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/db/prisma", () => ({
-  prisma: { studentProfile: { create: vi.fn() }, timetableEntry: { createMany: vi.fn() }, goal: { createMany: vi.fn() } },
-}));
+vi.mock("@/lib/db/prisma", () => {
+  const prismaMock: any = {
+    studentProfile: { create: vi.fn() },
+    timetableEntry: { createMany: vi.fn() },
+    goal: { createMany: vi.fn() },
+  };
+  // $transaction hands the callback the same mocked client as `tx`, so tests
+  // can configure studentProfile.create / timetableEntry.createMany / goal.createMany
+  // directly on `prisma` without needing to know about the transaction wrapper.
+  prismaMock.$transaction = vi.fn((fn: any) => fn(prismaMock));
+  return { prisma: prismaMock };
+});
 vi.mock("@/lib/onboarding/guardianConsent", () => ({ requestGuardianConsent: vi.fn() }));
 
 import { prisma } from "@/lib/db/prisma";
@@ -76,5 +85,18 @@ describe("completeOnboarding", () => {
     expect(result.success).toBe(true);
     expect(result.guardianConsentRequired).toBe(true);
     expect(requestGuardianConsent).toHaveBeenCalledWith("p1", { name: "Parent", email: "parent@example.test" });
+  });
+
+  it("returns a friendly error instead of throwing when a write fails partway through", async () => {
+    (prisma.studentProfile.create as any).mockResolvedValue({ id: "p1", subjects: [] });
+    (prisma.timetableEntry.createMany as any).mockRejectedValue(new Error("db error"));
+
+    const input = baseInput({
+      timetable: [{ dayOfWeek: 1, startTime: "09:00", endTime: "10:00" }],
+      guardian: { name: "Parent", email: "parent@example.test" },
+    });
+    const result = await completeOnboarding(input);
+
+    expect(result).toEqual({ success: false, error: "Something went wrong. Please try again." });
   });
 });
