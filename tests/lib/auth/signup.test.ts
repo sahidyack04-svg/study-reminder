@@ -1,0 +1,43 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/lib/db/prisma", () => ({
+  prisma: {
+    user: { findUnique: vi.fn(), create: vi.fn() },
+    verificationToken: { create: vi.fn() },
+  },
+}));
+vi.mock("@/lib/email/send", () => ({ sendEmail: vi.fn() }));
+
+import { prisma } from "@/lib/db/prisma";
+import { sendEmail } from "@/lib/email/send";
+import { signupStudent } from "@/lib/auth/signup";
+
+describe("signupStudent", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("rejects a weak password without touching the database", async () => {
+    const result = await signupStudent({ email: "a@example.test", password: "short" });
+    expect(result.success).toBe(false);
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("rejects an email that already has an account", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "existing" });
+    const result = await signupStudent({ email: "a@example.test", password: "longenoughpassword1" });
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/already exists/i);
+  });
+
+  it("creates a user, a verification token, and sends the verification email", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    (prisma.user.create as any).mockResolvedValue({ id: "u1", email: "a@example.test" });
+
+    const result = await signupStudent({ email: "a@example.test", password: "longenoughpassword1" });
+
+    expect(result.success).toBe(true);
+    expect(prisma.verificationToken.create).toHaveBeenCalledOnce();
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "a@example.test", subject: expect.stringMatching(/verify/i) }),
+    );
+  });
+});
