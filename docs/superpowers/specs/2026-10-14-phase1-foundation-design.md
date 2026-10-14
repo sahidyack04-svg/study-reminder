@@ -2,7 +2,7 @@
 
 Status: approved for spec; implementation plan pending
 Date: 2026-10-14
-Owner: greatramanar17@gmail.com
+Owner: sahidyack04@gmail.com
 Repo: https://github.com/sahidyack04-svg/study-reminder (empty at time of writing)
 
 ## Context
