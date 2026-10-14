@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stand up a working Next.js + Postgres app where a student can sign up, verify their email, complete guardian consent if under 18, complete a multi-step onboarding wizard, log in, see a real (not simulated) dashboard shell, and edit their profile later — all running locally against a real database, deployable to Vercel later but **not deployed in this phase**.
+**Goal:** Stand up a working Next.js + Prisma app where a student can sign up, verify their email, complete guardian consent if under 18, complete a multi-step onboarding wizard, log in, see a real (not simulated) dashboard shell, and edit their profile later — all running locally against a real database, deployable later but **not deployed in this phase**.
 
-**Architecture:** Next.js (App Router, TypeScript) with Prisma/Postgres for persistence, Auth.js (Credentials provider, JWT sessions with a DB-checked revocation flag — see Task 5), Tailwind for the pastel design system, and Resend for transactional email in production (falling back to a dev-only in-app inbox when `RESEND_API_KEY` is absent).
+**Architecture:** Next.js (App Router, TypeScript) with Prisma/SQLite for local persistence (Postgres at actual deployment time — see the spec's "SQLite ↔ Postgres portability" section for the two schema choices that keep this swap simple, and the one part that isn't automatic), Auth.js (Credentials provider, JWT sessions with a DB-checked revocation flag — see Task 5), Tailwind for the pastel design system, and Resend for transactional email in production (falling back to a dev-only in-app inbox when `RESEND_API_KEY` is absent).
 
-**Tech Stack:** Next.js 15 (App Router) · TypeScript · Tailwind CSS · Prisma · PostgreSQL (local instance for development; hosted Postgres of any provider at deployment time) · Auth.js v5 (`next-auth@beta`) · bcryptjs · Resend · Vitest + Testing Library
+**Tech Stack:** Next.js 15 (App Router) · TypeScript · Tailwind CSS · Prisma (`sqlite` connector for local dev; `postgresql` at deployment) · Auth.js v5 (`next-auth@beta`) · bcryptjs · Resend · Vitest + Testing Library
 
 **Spec:** `docs/superpowers/specs/2026-10-14-phase1-foundation-design.md`
 
@@ -270,7 +270,7 @@ export default defineConfig({
 import "@testing-library/jest-dom/vitest";
 ```
 
-`.gitignore`:
+`.gitignore` (the last two lines were added post-Task-1, during Task 2, for the SQLite dev database file):
 ```
 node_modules
 .next
@@ -278,11 +278,13 @@ node_modules
 .env*.local
 *.tsbuildinfo
 next-env.d.ts
+prisma/dev.db
+prisma/dev.db-journal
 ```
 
-`.env.example`:
+`.env.example` (updated post-Task-1 to reflect the SQLite decision made during Task 2 — see that task's setup note):
 ```
-DATABASE_URL="postgres://user:password@host:5432/dbname"
+DATABASE_URL="file:./dev.db"
 AUTH_SECRET="replace-with-a-long-random-string"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 RESEND_API_KEY=""
@@ -397,7 +399,7 @@ git commit -m "feat: scaffold Next.js + Tailwind + Vitest project"
 
 ### Task 2: Database schema & Prisma client
 
-> **Setup requirement before this task (updated after plan approval):** the project uses a **local PostgreSQL instance** for all development, per explicit instruction to keep everything local until the app is fully built and tested. Native PostgreSQL 17 is installed via `winget` (no Docker or native Postgres was available on this machine). `DATABASE_URL` points at `localhost` with a dedicated `study_reminder` database and a dedicated low-privilege app role — not the `postgres` superuser — created for this project. Because Prisma abstracts the connection behind a single `DATABASE_URL` env var, moving to a hosted Postgres (Vercel Postgres, Supabase, Neon, etc.) later is a connection-string swap, not an architecture change.
+> **Setup requirement before this task (updated a second time, during Task 2 execution):** local PostgreSQL 17 was installed via `winget`, but resetting its auto-generated superuser password requires an admin-rights service restart that this machine's working shell doesn't have, and elevated commands/Windows security changes are off the table per explicit instruction. **Development uses Prisma's `sqlite` connector instead** — a single local file, `prisma/dev.db`, no server/service/admin rights needed at all. `DATABASE_URL="file:./dev.db"`. Postgres is introduced later, at actual deployment time — see the spec's "SQLite ↔ Postgres portability" section for exactly what that cutover involves (it is a real migration event, not a pure connection-string swap, because the two connectors' migration histories aren't interchangeable). The local PostgreSQL install from the first attempt is left in place, untouched, in case this decision is reversed.
 
 **Files:**
 - Create: `prisma/schema.prisma`
@@ -416,7 +418,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -436,18 +438,21 @@ model User {
 
 // Required by @auth/prisma-adapter's PrismaAdapter type, even though the
 // Credentials provider never creates rows here (no OAuth account to link).
+// No @db.Text on the token columns: SQLite's connector doesn't support it,
+// and Postgres already maps plain String to text by default, so dropping
+// it costs nothing there and keeps this schema portable across both.
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -552,7 +557,7 @@ model ReminderPreference {
   id               String   @id @default(cuid())
   studentProfileId String   @unique
   channel          String // "browser" | "email" | "whatsapp" | "none"
-  preferredTimes   String[] // ["HH:mm", ...]
+  preferredTimes   String // JSON-encoded string[] of "HH:mm" — SQLite has no array type; see spec's portability note
   phone            String?
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
@@ -571,7 +576,7 @@ model RateLimitAttempt {
 - [ ] **Step 2: Run the migration**
 
 Run: `npx prisma migrate dev --name init`
-Expected: creates `prisma/migrations/`, applies it to the local Postgres database, generates the Prisma client.
+Expected: creates `prisma/dev.db` (a new SQLite file) and `prisma/migrations/`, generates the Prisma client. No server, service, or network connection is involved.
 
 - [ ] **Step 3: Write the failing test**
 
@@ -2541,7 +2546,11 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
       subjects: { create: input.subjects.map((name, order) => ({ name, order })) },
       availabilityWindows: { create: input.availability },
       reminderPreference: {
-        create: { channel: input.reminderChannel, preferredTimes: input.preferredTimes, phone: input.phone ?? null },
+        create: {
+          channel: input.reminderChannel,
+          preferredTimes: JSON.stringify(input.preferredTimes),
+          phone: input.phone ?? null,
+        },
       },
     },
     include: { subjects: true },

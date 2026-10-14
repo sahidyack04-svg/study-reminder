@@ -24,12 +24,41 @@ reasonable abuse hardening from the start.
 ## Decisions carried in from brainstorming
 
 - **Framework:** Next.js (App Router, TypeScript), deployed to Vercel.
-- **Database:** Postgres via Prisma ORM. **(Updated after plan approval)**
-  Development uses a **local PostgreSQL 17 instance** (installed via
-  `winget`, since Docker and native Postgres were unavailable at
-  brainstorming time) so development stays fully local; a hosted Postgres
-  of any provider is introduced only at actual deployment time by
-  swapping `DATABASE_URL`.
+- **Database:** Prisma ORM. **(Updated a second time, during Task 2
+  execution)** Local PostgreSQL 17 was installed via `winget`, but the
+  installer's auto-generated superuser password requires an admin-rights
+  service restart to reset, which this machine's working shell does not
+  have. Rather than wait on an elevated step, **development uses SQLite**
+  (Prisma's built-in `sqlite` connector, a single local `dev.db` file, no
+  server/service/admin rights needed at all) and **production will use
+  Postgres** at actual deployment time. This is a real architectural
+  trade-off, not a pure env-var swap — see "SQLite ↔ Postgres portability"
+  below for exactly what has to change at deploy time. The installed local
+  PostgreSQL service is left in place, untouched, in case this decision is
+  reversed later.
+
+### SQLite ↔ Postgres portability
+
+Two schema choices were made specifically so the same Prisma schema works
+on both connectors without conditional logic, at zero cost on Postgres:
+
+- `Account`'s OAuth token columns (`refresh_token`, `access_token`,
+  `id_token`) drop the `@db.Text` native-type attribute, which SQLite's
+  connector doesn't support. Postgres maps a plain `String` to `text`
+  natively anyway, so this loses nothing in production.
+- `ReminderPreference.preferredTimes` is a JSON-encoded `String` column
+  (`JSON.stringify`/`JSON.parse` in application code) instead of a native
+  `String[]` array — SQLite has no array type. This is slightly less
+  "native" on Postgres but is simpler and fully portable; a future phase
+  that reads this field parses the JSON back.
+
+What is **not** automatic: switching the `datasource` block's `provider`
+from `sqlite` to `postgresql` at deploy time is a real migration event —
+SQLite's and Postgres's migration histories are not interchangeable, so
+deployment requires regenerating a fresh Postgres migration from the
+schema (`prisma migrate dev` against the new `DATABASE_URL`) rather than
+replaying SQLite's migration files. This is the honest cost of developing
+against SQLite instead of a local/hosted Postgres from day one.
 - **Auth:** Auth.js v5, Credentials provider (email + bcrypt-hashed
   password). **(Updated during planning)** Auth.js does not support true
   database sessions with the Credentials provider, so sessions are JWT
@@ -141,13 +170,11 @@ a later phase if needed).
 
 ## Setup requirements (external, needed before implementation can run)
 
-1. **(Updated after plan approval)** A local PostgreSQL 17 instance,
-   installed via `winget` on the development machine, with a dedicated
-   `study_reminder` database and a dedicated app role — needed to obtain a
-   `DATABASE_URL` for local `prisma migrate dev`. Development stays fully
-   local; a hosted Postgres (Vercel Postgres or otherwise) is only
-   introduced later, at actual deployment time, by swapping the connection
-   string.
+1. **(Updated a second time)** None. Development uses Prisma's `sqlite`
+   connector against a local `prisma/dev.db` file — no server, service, or
+   admin rights required. `DATABASE_URL="file:./dev.db"`. A hosted Postgres
+   is introduced later, at actual deployment time (see "SQLite ↔ Postgres
+   portability" above for what that cutover involves).
 2. Optional at this phase: a Resend API key (`RESEND_API_KEY`) — without
    it, emails are logged to the console and viewable at `/dev/emails`
    instead of actually sending. Required before Phase 1 can be considered
