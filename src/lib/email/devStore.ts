@@ -5,12 +5,17 @@ export interface DevEmail {
   sentAt: Date;
 }
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __devEmailStore: DevEmail[] | undefined;
+}
+
 // Use globalThis to persist store across vi.resetModules() in tests
 const getGlobalStore = () => {
   if (!globalThis.__devEmailStore) {
     globalThis.__devEmailStore = [];
   }
-  return globalThis.__devEmailStore as DevEmail[];
+  return globalThis.__devEmailStore;
 };
 
 export function recordDevEmail(email: Omit<DevEmail, "sentAt">): void {
