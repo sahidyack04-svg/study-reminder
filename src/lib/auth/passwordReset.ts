@@ -1,0 +1,46 @@
+"use server";
+
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/db/prisma";
+import { validatePassword } from "@/lib/validation/password";
+import { generateToken, tokenExpiryDate, isTokenExpired } from "@/lib/validation/tokens";
+import { sendEmail } from "@/lib/email/send";
+import { revokeAllSessions } from "@/lib/auth/revokeSessions";
+
+export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user) {
+    const token = generateToken();
+    await prisma.verificationToken.create({
+      data: { token, userId: user.id, purpose: "password_reset", expiresAt: tokenExpiryDate(1) },
+    });
+    await sendEmail({
+      to: email,
+      subject: "Reset your Study Reminder password",
+      body: `Reset your password here: ${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`,
+    });
+  }
+  return { success: true };
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<{ success: boolean; error?: string }> {
+  const record = await prisma.verificationToken.findUnique({ where: { token } });
+  if (!record || record.purpose !== "password_reset" || isTokenExpired(record.expiresAt)) {
+    if (record) await prisma.verificationToken.delete({ where: { token } });
+    return { success: false, error: "This reset link is invalid or has expired." };
+  }
+
+  const passwordCheck = validatePassword(newPassword);
+  if (!passwordCheck.valid) {
+    return { success: false, error: passwordCheck.reason };
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({ where: { id: record.userId }, data: { passwordHash } });
+  await revokeAllSessions(record.userId);
+  await prisma.verificationToken.delete({ where: { token } });
+  return { success: true };
+}
