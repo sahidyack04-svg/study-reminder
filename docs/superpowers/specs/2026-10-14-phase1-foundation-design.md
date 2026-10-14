@@ -24,13 +24,17 @@ reasonable abuse hardening from the start.
 ## Decisions carried in from brainstorming
 
 - **Framework:** Next.js (App Router, TypeScript), deployed to Vercel.
-- **Database:** Postgres via Prisma ORM. **Vercel Postgres** is used for
-  both local development and production — a single free Vercel Postgres
-  database is created up front and its `DATABASE_URL` is used locally too,
-  since native Postgres and Docker are not available on the dev machine.
+- **Database:** Postgres via Prisma ORM. **(Updated after plan approval)**
+  Development uses a **local PostgreSQL 17 instance** (installed via
+  `winget`, since Docker and native Postgres were unavailable at
+  brainstorming time) so development stays fully local; a hosted Postgres
+  of any provider is introduced only at actual deployment time by
+  swapping `DATABASE_URL`.
 - **Auth:** Auth.js v5, Credentials provider (email + bcrypt-hashed
-  password), **database-backed sessions** via the Prisma adapter (not
-  JWT) so sessions can be revoked server-side.
+  password). **(Updated during planning)** Auth.js does not support true
+  database sessions with the Credentials provider, so sessions are JWT
+  with a DB-checked `sessionVersion` revocation flag instead — see the
+  Phase 1 implementation plan for the mechanism.
 - **Styling:** Tailwind CSS, soft pastel pink / lavender / cream / white
   theme per the product brief.
 - **Testing:** Vitest + React Testing Library for unit/component tests.
@@ -137,9 +141,13 @@ a later phase if needed).
 
 ## Setup requirements (external, needed before implementation can run)
 
-1. A free Vercel Postgres database, created via the Vercel dashboard
-   (Storage → Postgres) — needed to obtain a `DATABASE_URL` for local
-   `prisma migrate dev`. No app deployment is required to create this.
+1. **(Updated after plan approval)** A local PostgreSQL 17 instance,
+   installed via `winget` on the development machine, with a dedicated
+   `study_reminder` database and a dedicated app role — needed to obtain a
+   `DATABASE_URL` for local `prisma migrate dev`. Development stays fully
+   local; a hosted Postgres (Vercel Postgres or otherwise) is only
+   introduced later, at actual deployment time, by swapping the connection
+   string.
 2. Optional at this phase: a Resend API key (`RESEND_API_KEY`) — without
    it, emails are logged to the console and viewable at `/dev/emails`
    instead of actually sending. Required before Phase 1 can be considered

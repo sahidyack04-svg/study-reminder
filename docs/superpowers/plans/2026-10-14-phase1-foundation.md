@@ -6,7 +6,7 @@
 
 **Architecture:** Next.js (App Router, TypeScript) with Prisma/Postgres for persistence, Auth.js (Credentials provider, JWT sessions with a DB-checked revocation flag — see Task 5), Tailwind for the pastel design system, and Resend for transactional email in production (falling back to a dev-only in-app inbox when `RESEND_API_KEY` is absent).
 
-**Tech Stack:** Next.js 15 (App Router) · TypeScript · Tailwind CSS · Prisma · Vercel Postgres (same DB for dev and prod) · Auth.js v5 (`next-auth@beta`) · bcryptjs · Resend · Vitest + Testing Library
+**Tech Stack:** Next.js 15 (App Router) · TypeScript · Tailwind CSS · Prisma · PostgreSQL (local instance for development; hosted Postgres of any provider at deployment time) · Auth.js v5 (`next-auth@beta`) · bcryptjs · Resend · Vitest + Testing Library
 
 **Spec:** `docs/superpowers/specs/2026-10-14-phase1-foundation-design.md`
 
@@ -397,7 +397,7 @@ git commit -m "feat: scaffold Next.js + Tailwind + Vitest project"
 
 ### Task 2: Database schema & Prisma client
 
-> **Setup requirement before this task:** create a free Vercel Postgres database (vercel.com → your account → Storage → Create Database → Postgres). This only provisions a database — it does not deploy the app. Copy the connection string it gives you into a local `.env` file (not committed) as `DATABASE_URL`.
+> **Setup requirement before this task (updated after plan approval):** the project uses a **local PostgreSQL instance** for all development, per explicit instruction to keep everything local until the app is fully built and tested. Native PostgreSQL 17 is installed via `winget` (no Docker or native Postgres was available on this machine). `DATABASE_URL` points at `localhost` with a dedicated `study_reminder` database and a dedicated low-privilege app role — not the `postgres` superuser — created for this project. Because Prisma abstracts the connection behind a single `DATABASE_URL` env var, moving to a hosted Postgres (Vercel Postgres, Supabase, Neon, etc.) later is a connection-string swap, not an architecture change.
 
 **Files:**
 - Create: `prisma/schema.prisma`
@@ -571,7 +571,7 @@ model RateLimitAttempt {
 - [ ] **Step 2: Run the migration**
 
 Run: `npx prisma migrate dev --name init`
-Expected: creates `prisma/migrations/`, applies it to the Vercel Postgres database, generates the Prisma client.
+Expected: creates `prisma/migrations/`, applies it to the local Postgres database, generates the Prisma client.
 
 - [ ] **Step 3: Write the failing test**
 
