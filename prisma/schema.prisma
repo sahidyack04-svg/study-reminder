@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  emailVerified  DateTime?
+  sessionVersion Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts           Account[]
+  verificationTokens VerificationToken[]
+  studentProfile     StudentProfile?
+}
+
+// Required by @auth/prisma-adapter's PrismaAdapter type, even though the
+// Credentials provider never creates rows here (no OAuth account to link).
+// No @db.Text on the token columns: SQLite's connector doesn't support it,
+// and Postgres already maps plain String to text by default, so dropping
+// it costs nothing there and keeps this schema portable across both.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// App-specific single-use tokens (email verification, password reset).
+// NOT the NextAuth "magic link" VerificationToken shape — we don't use that flow.
+model VerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  purpose   String // "email_verify" | "password_reset"
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudentProfile {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  name                  String
+  dateOfBirth           DateTime
+  grade                 String
+  schoolName            String
+  curriculum            String
+  academicYear          String
+  gender                String? // null = "prefer not to say"
+  timezone              String
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guardian            Guardian?
+  subjects            Subject[]
+  timetableEntries    TimetableEntry[]
+  availabilityWindows AvailabilityWindow[]
+  goals               Goal[]
+  reminderPreference  ReminderPreference?
+}
+
+model Guardian {
+  id                 String    @id @default(cuid())
+  studentProfileId   String    @unique
+  name               String
+  email              String
+  consentToken       String    @unique
+  consentRequestedAt DateTime  @default(now())
+  consentGivenAt     DateTime?
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+}
+
+model Subject {
+  id               String @id @default(cuid())
+  studentProfileId String
+  name             String
+  order            Int    @default(0)
+
+  studentProfile   StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  timetableEntries TimetableEntry[]
+  goals            Goal[]
+}
+
+model TimetableEntry {
+  id               String  @id @default(cuid())
+  studentProfileId String
+  dayOfWeek        Int // 0=Sunday .. 6=Saturday
+  subjectId        String?
+  startTime        String // "HH:mm"
+  endTime          String // "HH:mm"
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+}
+
+model AvailabilityWindow {
+  id               String @id @default(cuid())
+  studentProfileId String
+  dayOfWeek        Int
+  startTime        String
+  endTime          String
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+}
+
+model Goal {
+  id               String    @id @default(cuid())
+  studentProfileId String
+  subjectId        String?
+  description      String
+  examDate         DateTime?
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+}
+
+model ReminderPreference {
+  id               String   @id @default(cuid())
+  studentProfileId String   @unique
+  channel          String // "browser" | "email" | "whatsapp" | "none"
+  preferredTimes   String // JSON-encoded string[] of "HH:mm" — SQLite has no array type; see spec's portability note
+  phone            String?
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+}
+
+model RateLimitAttempt {
+  id         String   @id @default(cuid())
+  action     String
+  identifier String
+  createdAt  DateTime @default(now())
+
+  @@index([action, identifier, createdAt])
+}
