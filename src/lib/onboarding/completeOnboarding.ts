@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
-import { requiresGuardianConsent } from "@/lib/validation/age";
+import { requiresGuardianConsent, todayInTimezone } from "@/lib/validation/age";
 import { hasOverlap } from "@/lib/validation/timetable";
 import { requestGuardianConsent } from "./guardianConsent";
 
@@ -40,7 +40,7 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
   }
 
   const dob = new Date(input.dateOfBirth);
-  const guardianRequired = requiresGuardianConsent(dob);
+  const guardianRequired = requiresGuardianConsent(dob, todayInTimezone(input.timezone));
   if (guardianRequired && !input.guardian) {
     return { success: false, error: "A guardian name and email are required for students under 18." };
   }
