@@ -10,6 +10,17 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [emailDelivered, setEmailDelivered] = useState(false);
+
+  function handlePasswordChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setPassword(e.target.value);
+    setError(null);
+  }
+
+  function handleConfirmPasswordChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setConfirmPassword(e.target.value);
+    setError(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,6 +35,7 @@ export default function SignupPage() {
     try {
       const result = await signupStudent({ email, password });
       if (result.success) {
+        setEmailDelivered(Boolean(result.emailDelivered));
         setStatus("success");
       } else {
         setStatus("error");
@@ -39,9 +51,20 @@ export default function SignupPage() {
     return (
       <main className="mx-auto max-w-md px-6 py-24 text-center">
         <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Check your email</h1>
-        <p className="text-slate-600">
-          We&apos;ve sent a verification link to <strong>{email}</strong>. Click it to activate your account.
-        </p>
+        {emailDelivered ? (
+          <p className="text-slate-600">
+            We&apos;ve sent a verification link to <strong>{email}</strong>. Click it to activate your account.
+          </p>
+        ) : (
+          <p className="text-slate-600">
+            No email provider is configured in this environment, so nothing was actually emailed. You can
+            find your verification link in the{" "}
+            <Link href="/dev/emails" className="text-lavender-dark underline">
+              local dev inbox
+            </Link>{" "}
+            instead.
+          </p>
+        )}
       </main>
     );
   }
@@ -67,7 +90,7 @@ export default function SignupPage() {
             required
             minLength={10}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={handlePasswordChange}
             className="rounded-lg border border-lavender px-4 py-2"
           />
         </label>
@@ -77,11 +100,17 @@ export default function SignupPage() {
             type="password"
             required
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={handleConfirmPasswordChange}
+            aria-invalid={!!error}
+            aria-describedby={error ? "password-match-error" : undefined}
             className="rounded-lg border border-lavender px-4 py-2"
           />
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p id="password-match-error" role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
         <button
           type="submit"
           disabled={status === "submitting"}

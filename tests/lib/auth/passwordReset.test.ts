@@ -13,6 +13,7 @@ vi.mock("@/lib/security/rateLimit", () => ({ checkRateLimit: vi.fn().mockResolve
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { revokeAllSessions } from "@/lib/auth/revokeSessions";
+import { hashToken } from "@/lib/validation/tokens";
 import { requestPasswordReset, resetPassword } from "@/lib/auth/passwordReset";
 
 describe("requestPasswordReset", () => {
@@ -43,7 +44,7 @@ describe("resetPassword", () => {
 
   it("rejects a weak new password", async () => {
     (prisma.verificationToken.findUnique as any).mockResolvedValue({
-      token: "t1",
+      token: hashToken("t1"),
       userId: "u1",
       purpose: "password_reset",
       expiresAt: new Date(Date.now() + 10000),
@@ -55,7 +56,7 @@ describe("resetPassword", () => {
 
   it("updates the password hash and revokes existing sessions on success", async () => {
     (prisma.verificationToken.findUnique as any).mockResolvedValue({
-      token: "t1",
+      token: hashToken("t1"),
       userId: "u1",
       purpose: "password_reset",
       expiresAt: new Date(Date.now() + 10000),
@@ -64,6 +65,6 @@ describe("resetPassword", () => {
     expect(result.success).toBe(true);
     expect(prisma.user.update).toHaveBeenCalled();
     expect(revokeAllSessions).toHaveBeenCalledWith("u1");
-    expect(prisma.verificationToken.delete).toHaveBeenCalledWith({ where: { token: "t1" } });
+    expect(prisma.verificationToken.delete).toHaveBeenCalledWith({ where: { token: hashToken("t1") } });
   });
 });

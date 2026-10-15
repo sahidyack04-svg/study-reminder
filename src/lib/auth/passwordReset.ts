@@ -3,7 +3,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { validatePassword } from "@/lib/validation/password";
-import { generateToken, tokenExpiryDate, isTokenExpired } from "@/lib/validation/tokens";
+import { generateToken, hashToken, tokenExpiryDate, isTokenExpired } from "@/lib/validation/tokens";
 import { sendEmail } from "@/lib/email/send";
 import { revokeAllSessions } from "@/lib/auth/revokeSessions";
 import { checkRateLimit } from "@/lib/security/rateLimit";
@@ -23,7 +23,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   if (user) {
     const token = generateToken();
     await prisma.verificationToken.create({
-      data: { token, userId: user.id, purpose: "password_reset", expiresAt: tokenExpiryDate(1) },
+      data: { token: hashToken(token), userId: user.id, purpose: "password_reset", expiresAt: tokenExpiryDate(1) },
     });
     await sendEmail({
       to: email,
@@ -38,9 +38,10 @@ export async function resetPassword(
   token: string,
   newPassword: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const record = await prisma.verificationToken.findUnique({ where: { token } });
+  const tokenHash = hashToken(token);
+  const record = await prisma.verificationToken.findUnique({ where: { token: tokenHash } });
   if (!record || record.purpose !== "password_reset" || isTokenExpired(record.expiresAt)) {
-    if (record) await prisma.verificationToken.delete({ where: { token } });
+    if (record) await prisma.verificationToken.delete({ where: { token: tokenHash } });
     return { success: false, error: "This reset link is invalid or has expired." };
   }
 
@@ -52,6 +53,6 @@ export async function resetPassword(
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({ where: { id: record.userId }, data: { passwordHash } });
   await revokeAllSessions(record.userId);
-  await prisma.verificationToken.delete({ where: { token } });
+  await prisma.verificationToken.delete({ where: { token: tokenHash } });
   return { success: true };
 }
