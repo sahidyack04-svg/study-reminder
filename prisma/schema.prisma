@@ -79,6 +79,8 @@ model StudentProfile {
   timetableEntries    TimetableEntry[]
   availabilityWindows AvailabilityWindow[]
   goals               Goal[]
+  tasks               Task[]
+  planEntries         PlanEntry[]
   reminderPreference  ReminderPreference?
 }
 
@@ -103,6 +105,8 @@ model Subject {
   studentProfile   StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   timetableEntries TimetableEntry[]
   goals            Goal[]
+  tasks            Task[]
+  planEntries      PlanEntry[]
 }
 
 model TimetableEntry {
@@ -136,6 +140,7 @@ model Goal {
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  planEntries    PlanEntry[]
 }
 
 model ReminderPreference {
@@ -146,6 +151,43 @@ model ReminderPreference {
   phone            String?
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id               String    @id @default(cuid())
+  studentProfileId String
+  subjectId        String?
+  title            String
+  dueDate          DateTime?
+  estimatedMinutes Int
+  status           String    @default("open") // "open" | "done"
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  planEntries    PlanEntry[]
+}
+
+model PlanEntry {
+  id                  String    @id @default(cuid())
+  studentProfileId    String
+  date                DateTime // UTC-midnight-anchored calendar date
+  taskId              String?
+  goalId              String?
+  subjectId           String?
+  title               String
+  estimatedMinutes    Int
+  checkInStatus       String    @default("pending") // "pending" | "done" | "partial" | "not_done"
+  carriedOverFromDate DateTime?
+  createdAt           DateTime  @default(now())
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  task           Task?          @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  goal           Goal?          @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, date])
 }
 
 model RateLimitAttempt {
