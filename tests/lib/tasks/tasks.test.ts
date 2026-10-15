@@ -5,6 +5,7 @@ vi.mock("@/lib/db/prisma", () => ({
     studentProfile: { findUnique: vi.fn() },
     task: { findMany: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     planEntry: { updateMany: vi.fn() },
+    subject: { findUnique: vi.fn() },
   },
 }));
 vi.mock("@/lib/auth/session", () => ({ getCurrentSessionUser: vi.fn() }));
@@ -63,6 +64,27 @@ describe("createTask", () => {
       expect.objectContaining({ data: expect.objectContaining({ studentProfileId: "p1", title: "Essay" }) }),
     );
   });
+
+  it("rejects a subjectId belonging to a different profile without creating the task", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.subject.findUnique as any).mockResolvedValue({ id: "s1", studentProfileId: "someone-elses-profile" });
+    const result = await createTask({ title: "Essay", estimatedMinutes: 30, subjectId: "s1" });
+    expect(result.success).toBe(false);
+    expect(prisma.task.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a task when subjectId legitimately belongs to the caller", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.subject.findUnique as any).mockResolvedValue({ id: "s1", studentProfileId: "p1" });
+    (prisma.task.create as any).mockResolvedValue({ id: "t1" });
+    const result = await createTask({ title: "Essay", estimatedMinutes: 30, subjectId: "s1" });
+    expect(result.success).toBe(true);
+    expect(prisma.task.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subjectId: "s1" }) }),
+    );
+  });
 });
 
 describe("updateTask / deleteTask / markTaskDone — cross-student protection", () => {
@@ -93,6 +115,61 @@ describe("updateTask / deleteTask / markTaskDone — cross-student protection", 
     const result = await markTaskDone("t1");
     expect(result.success).toBe(false);
     expect(prisma.task.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateTask — input validation", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("rejects a blank title without calling prisma.task.update", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.task.findUnique as any).mockResolvedValue({ id: "t1", studentProfileId: "p1" });
+    const result = await updateTask("t1", { title: "   " });
+    expect(result.success).toBe(false);
+    expect(prisma.task.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-positive estimatedMinutes without calling prisma.task.update", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.task.findUnique as any).mockResolvedValue({ id: "t1", studentProfileId: "p1" });
+    const result = await updateTask("t1", { estimatedMinutes: 0 });
+    expect(result.success).toBe(false);
+    expect(prisma.task.update).not.toHaveBeenCalled();
+  });
+
+  it("allows a valid partial update that only touches dueDate", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.task.findUnique as any).mockResolvedValue({ id: "t1", studentProfileId: "p1" });
+    (prisma.task.update as any).mockResolvedValue({ id: "t1" });
+    const result = await updateTask("t1", { dueDate: "2026-12-01" });
+    expect(result.success).toBe(true);
+    expect(prisma.task.update).toHaveBeenCalled();
+  });
+
+  it("rejects a subjectId belonging to a different profile without calling prisma.task.update", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.task.findUnique as any).mockResolvedValue({ id: "t1", studentProfileId: "p1" });
+    (prisma.subject.findUnique as any).mockResolvedValue({ id: "s1", studentProfileId: "someone-elses-profile" });
+    const result = await updateTask("t1", { subjectId: "s1" });
+    expect(result.success).toBe(false);
+    expect(prisma.task.update).not.toHaveBeenCalled();
+  });
+
+  it("allows updating subjectId when it legitimately belongs to the caller", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.task.findUnique as any).mockResolvedValue({ id: "t1", studentProfileId: "p1" });
+    (prisma.subject.findUnique as any).mockResolvedValue({ id: "s1", studentProfileId: "p1" });
+    (prisma.task.update as any).mockResolvedValue({ id: "t1" });
+    const result = await updateTask("t1", { subjectId: "s1" });
+    expect(result.success).toBe(true);
+    expect(prisma.task.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subjectId: "s1" }) }),
+    );
   });
 });
 

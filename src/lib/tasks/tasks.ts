@@ -14,7 +14,7 @@ export interface TaskView {
 
 export interface CreateTaskInput {
   title: string;
-  subjectId?: string;
+  subjectId?: string | null;
   dueDate?: string;
   estimatedMinutes: number;
 }
@@ -47,6 +47,10 @@ export async function createTask(input: CreateTaskInput): Promise<{ success: boo
     return { success: false, error: "You must be signed in to add a task." };
   }
 
+  if (input.subjectId && !(await assertOwnedSubject(input.subjectId, profile.id))) {
+    return { success: false, error: "Subject not found." };
+  }
+
   await prisma.task.create({
     data: {
       studentProfileId: profile.id,
@@ -67,6 +71,11 @@ async function assertOwnedTask(taskId: string, profileId: string) {
   return task;
 }
 
+async function assertOwnedSubject(subjectId: string, profileId: string): Promise<boolean> {
+  const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
+  return !!subject && subject.studentProfileId === profileId;
+}
+
 export async function updateTask(
   taskId: string,
   changes: Partial<CreateTaskInput>,
@@ -79,6 +88,21 @@ export async function updateTask(
   const task = await assertOwnedTask(taskId, profile.id);
   if (!task) {
     return { success: false, error: "Task not found." };
+  }
+
+  if (changes.title !== undefined && !changes.title.trim()) {
+    return { success: false, error: "Title is required." };
+  }
+  if (
+    changes.estimatedMinutes !== undefined &&
+    (!Number.isFinite(changes.estimatedMinutes) || changes.estimatedMinutes <= 0)
+  ) {
+    return { success: false, error: "Estimated minutes must be a positive number." };
+  }
+  if (changes.subjectId !== undefined && changes.subjectId !== null) {
+    if (!(await assertOwnedSubject(changes.subjectId, profile.id))) {
+      return { success: false, error: "Subject not found." };
+    }
   }
 
   await prisma.task.update({
