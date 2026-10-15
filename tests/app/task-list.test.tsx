@@ -20,7 +20,10 @@ describe("TaskList", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("adds a new task to the list on successful submit", async () => {
-    (createTask as any).mockResolvedValue({ success: true });
+    (createTask as any).mockResolvedValue({
+      success: true,
+      task: { id: "new-task-id", title: "Read chapter 4", subjectId: null, dueDate: null, estimatedMinutes: 20, status: "open" },
+    });
     render(<TaskList initialTasks={initialTasks} subjects={subjects} />);
 
     fireEvent.change(screen.getByPlaceholderText(/task title/i), { target: { value: "Read chapter 4" } });

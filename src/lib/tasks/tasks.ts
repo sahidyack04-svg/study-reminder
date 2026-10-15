@@ -34,7 +34,9 @@ export async function listTasks(): Promise<TaskView[]> {
   });
 }
 
-export async function createTask(input: CreateTaskInput): Promise<{ success: boolean; error?: string }> {
+export async function createTask(
+  input: CreateTaskInput,
+): Promise<{ success: boolean; error?: string; task?: TaskView }> {
   if (!input.title.trim()) {
     return { success: false, error: "Title is required." };
   }
@@ -51,7 +53,7 @@ export async function createTask(input: CreateTaskInput): Promise<{ success: boo
     return { success: false, error: "Subject not found." };
   }
 
-  await prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       studentProfileId: profile.id,
       title: input.title.trim(),
@@ -60,7 +62,7 @@ export async function createTask(input: CreateTaskInput): Promise<{ success: boo
       estimatedMinutes: input.estimatedMinutes,
     },
   });
-  return { success: true };
+  return { success: true, task };
 }
 
 async function assertOwnedTask(taskId: string, profileId: string) {

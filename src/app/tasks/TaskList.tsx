@@ -37,14 +37,11 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
       dueDate: dueDate || undefined,
       estimatedMinutes,
     });
-    if (!result.success) {
+    if (!result.success || !result.task) {
       setError(result.error ?? "Something went wrong.");
       return;
     }
-    setTasks((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), title, subjectId: subjectId || null, dueDate: dueDate || null, estimatedMinutes, status: "open" },
-    ]);
+    setTasks((prev) => [...prev, result.task!]);
     setTitle("");
     setDueDate("");
     setEstimatedMinutes(30);

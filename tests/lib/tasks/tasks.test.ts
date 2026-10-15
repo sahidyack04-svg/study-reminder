@@ -57,12 +57,14 @@ describe("createTask", () => {
   it("creates a task scoped to the signed-in student's profile", async () => {
     (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
     (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
-    (prisma.task.create as any).mockResolvedValue({ id: "t1" });
+    const createdTask = { id: "t1", title: "Essay", subjectId: null, dueDate: null, estimatedMinutes: 30, status: "open" };
+    (prisma.task.create as any).mockResolvedValue(createdTask);
     const result = await createTask({ title: "Essay", estimatedMinutes: 30, dueDate: "2026-11-01" });
     expect(result.success).toBe(true);
     expect(prisma.task.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ studentProfileId: "p1", title: "Essay" }) }),
     );
+    expect(result.task).toEqual(createdTask);
   });
 
   it("rejects a subjectId belonging to a different profile without creating the task", async () => {
