@@ -4,7 +4,7 @@ export interface TimeRange {
   endTime: string;
 }
 
-function toMinutes(time: string): number {
+export function toMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;
 }
