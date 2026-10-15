@@ -3,11 +3,22 @@
 import { prisma } from "@/lib/db/prisma";
 import { generateToken } from "@/lib/validation/tokens";
 import { sendEmail } from "@/lib/email/send";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 
 export async function requestGuardianConsent(
   studentProfileId: string,
   guardian: { name: string; email: string },
 ) {
+  const rateLimit = await checkRateLimit({
+    action: "guardian_consent",
+    identifier: studentProfileId,
+    maxAttempts: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    throw new Error("Too many consent requests sent recently. Please try again later.");
+  }
+
   const token = generateToken();
   const record = await prisma.guardian.upsert({
     where: { studentProfileId },

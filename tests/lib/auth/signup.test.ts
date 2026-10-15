@@ -7,6 +7,7 @@ vi.mock("@/lib/db/prisma", () => ({
   },
 }));
 vi.mock("@/lib/email/send", () => ({ sendEmail: vi.fn() }));
+vi.mock("@/lib/security/rateLimit", () => ({ checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }) }));
 
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";

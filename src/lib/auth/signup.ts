@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { validatePassword } from "@/lib/validation/password";
 import { generateToken, tokenExpiryDate } from "@/lib/validation/tokens";
 import { sendEmail } from "@/lib/email/send";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 
 export interface SignupInput {
   email: string;
@@ -20,6 +21,16 @@ export async function signupStudent({ email, password }: SignupInput): Promise<S
   const passwordCheck = validatePassword(password);
   if (!passwordCheck.valid) {
     return { success: false, error: passwordCheck.reason };
+  }
+
+  const rateLimit = await checkRateLimit({
+    action: "signup",
+    identifier: email,
+    maxAttempts: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return { success: false, error: "Too many signup attempts. Please try again later." };
   }
 
   try {

@@ -6,8 +6,19 @@ import { validatePassword } from "@/lib/validation/password";
 import { generateToken, tokenExpiryDate, isTokenExpired } from "@/lib/validation/tokens";
 import { sendEmail } from "@/lib/email/send";
 import { revokeAllSessions } from "@/lib/auth/revokeSessions";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
+  const rateLimit = await checkRateLimit({
+    action: "password_reset",
+    identifier: email,
+    maxAttempts: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return { success: true }; // still don't reveal anything; just silently skip sending
+  }
+
   const user = await prisma.user.findUnique({ where: { email } });
   if (user) {
     const token = generateToken();
