@@ -80,7 +80,7 @@ describe("resendVerificationEmail", () => {
 
     const result = await resendVerificationEmail("student@example.test");
 
-    expect(result).toEqual({ success: true, emailDelivered: true });
+    expect(result).toEqual({ success: true });
     expect(prisma.verificationToken.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ userId: "u1", purpose: "email_verify" }),
     });

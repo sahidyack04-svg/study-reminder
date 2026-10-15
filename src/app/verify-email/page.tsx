@@ -13,7 +13,6 @@ function VerifyEmailContent() {
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
-  const [resendEmailDelivered, setResendEmailDelivered] = useState(false);
 
   async function handleVerify() {
     if (!token) return;
@@ -34,31 +33,20 @@ function VerifyEmailContent() {
 
   async function handleResend(e: React.FormEvent) {
     e.preventDefault();
-    const result = await resendVerificationEmail(email);
-    setResendEmailDelivered(Boolean(result.emailDelivered));
+    await resendVerificationEmail(email);
     setSent(true);
   }
 
   if (!token) {
     if (sent) {
-      if (resendEmailDelivered) {
-        return (
-          <p className="text-slate-600">
-            If an account exists for <strong>{email}</strong> and isn&apos;t verified yet, we&apos;ve sent a
-            new link.
-          </p>
-        );
-      }
-
       return (
         <p className="text-slate-600">
-          No email provider is configured in this environment, so nothing was actually emailed. If an
-          account exists for <strong>{email}</strong> and isn&apos;t verified yet, you can find the link in
-          the{" "}
+          If an account exists for <strong>{email}</strong> and isn&apos;t verified yet, we&apos;ve sent a
+          new link. (Testing locally without an email provider configured? Check the{" "}
           <Link href="/dev/emails" className="text-lavender-dark underline">
             local dev inbox
-          </Link>{" "}
-          instead.
+          </Link>
+          .)
         </p>
       );
     }

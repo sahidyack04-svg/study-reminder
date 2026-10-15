@@ -26,7 +26,7 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
 // success, and only actually send when the account exists and is still
 // unverified. Any existing unexpired token is left alone — multiple valid
 // tokens for the same purpose can coexist safely.
-export async function resendVerificationEmail(email: string): Promise<{ success: boolean; emailDelivered?: boolean }> {
+export async function resendVerificationEmail(email: string): Promise<{ success: boolean }> {
   const rateLimit = await checkRateLimit({
     action: "resend_verification",
     identifier: email,
@@ -43,12 +43,11 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
     await prisma.verificationToken.create({
       data: { token: hashToken(token), userId: user.id, purpose: "email_verify", expiresAt: tokenExpiryDate(24) },
     });
-    const emailResult = await sendEmail({
+    await sendEmail({
       to: email,
       subject: "Verify your Study Reminder account",
       body: `Verify your email here: ${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`,
     });
-    return { success: true, emailDelivered: emailResult.delivered };
   }
   return { success: true };
 }
