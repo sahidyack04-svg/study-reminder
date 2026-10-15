@@ -1058,7 +1058,9 @@ git commit -m "feat: add plan service with lazy generation and check-in"
 - Test: `tests/app/task-list.test.tsx`
 
 **Interfaces:**
-- Consumes: `getCurrentSessionUser` (Phase 1), `listTasks`/`createTask`/`deleteTask`/`markTaskDone` (Task 2), `prisma` (Phase 1, for loading the student's subjects to populate the subject dropdown).
+- Consumes: `getCurrentSessionUser` (Phase 1), `listTasks`/`createTask`/`updateTask`/`deleteTask`/`markTaskDone` (Task 2), `prisma` (Phase 1, for loading the student's subjects to populate the subject dropdown).
+
+The spec's Pages section lists `/tasks` as "list, add, edit, delete" — this task must wire up all four, not just add/delete/mark-done. `updateTask` (already built in Task 2) is what the edit affordance below calls.
 
 - [ ] **Step 1: Write a failing component test**
 
@@ -1070,11 +1072,12 @@ import { TaskList } from "@/app/tasks/TaskList";
 
 vi.mock("@/lib/tasks/tasks", () => ({
   createTask: vi.fn(),
+  updateTask: vi.fn(),
   deleteTask: vi.fn(),
   markTaskDone: vi.fn(),
 }));
 
-import { createTask, deleteTask, markTaskDone } from "@/lib/tasks/tasks";
+import { createTask, updateTask, deleteTask, markTaskDone } from "@/lib/tasks/tasks";
 
 const subjects = [{ id: "sub1", name: "Math" }];
 const initialTasks = [
@@ -1119,6 +1122,35 @@ describe("TaskList", () => {
       expect(markTaskDone).toHaveBeenCalledWith("t1");
     });
   });
+
+  it("edits a task's title and estimated minutes via the inline edit form", async () => {
+    (updateTask as any).mockResolvedValue({ success: true });
+    render(<TaskList initialTasks={initialTasks} subjects={subjects} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /edit algebra worksheet/i }));
+
+    const titleInput = screen.getByDisplayValue("Algebra worksheet");
+    fireEvent.change(titleInput, { target: { value: "Algebra worksheet (revised)" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Algebra worksheet (revised)")).toBeInTheDocument();
+    });
+    expect(updateTask).toHaveBeenCalledWith(
+      "t1",
+      expect.objectContaining({ title: "Algebra worksheet (revised)" }),
+    );
+  });
+
+  it("cancels an edit without calling updateTask", async () => {
+    render(<TaskList initialTasks={initialTasks} subjects={subjects} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /edit algebra worksheet/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    expect(screen.getByText("Algebra worksheet")).toBeInTheDocument();
+    expect(updateTask).not.toHaveBeenCalled();
+  });
 });
 ```
 
@@ -1134,7 +1166,7 @@ Expected: FAIL — module not found.
 "use client";
 
 import { useState } from "react";
-import { createTask, deleteTask, markTaskDone } from "@/lib/tasks/tasks";
+import { createTask, updateTask, deleteTask, markTaskDone } from "@/lib/tasks/tasks";
 
 interface TaskView {
   id: string;
@@ -1157,6 +1189,9 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
   const [dueDate, setDueDate] = useState("");
   const [estimatedMinutes, setEstimatedMinutes] = useState(30);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editEstimatedMinutes, setEditEstimatedMinutes] = useState(30);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -1180,7 +1215,7 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
     setEstimatedMinutes(30);
   }
 
-  async function handleDelete(id: string, taskTitle: string) {
+  async function handleDelete(id: string) {
     const result = await deleteTask(id);
     if (result.success) {
       setTasks((prev) => prev.filter((t) => t.id !== id));
@@ -1191,6 +1226,26 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
     const result = await markTaskDone(id);
     if (result.success) {
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: "done" } : t)));
+    }
+  }
+
+  function startEdit(task: TaskView) {
+    setEditingId(task.id);
+    setEditTitle(task.title);
+    setEditEstimatedMinutes(task.estimatedMinutes);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit(id: string) {
+    const result = await updateTask(id, { title: editTitle, estimatedMinutes: editEstimatedMinutes });
+    if (result.success) {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, title: editTitle, estimatedMinutes: editEstimatedMinutes } : t)),
+      );
+      setEditingId(null);
     }
   }
 
@@ -1239,29 +1294,70 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
       </form>
 
       <ul className="flex flex-col gap-2">
-        {tasks.map((task) => (
-          <li key={task.id} className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm">
-            <span className={task.status === "done" ? "text-slate-400 line-through" : ""}>{task.title}</span>
-            <div className="flex gap-2">
-              {task.status !== "done" && (
+        {tasks.map((task) =>
+          editingId === task.id ? (
+            <li key={task.id} className="flex flex-col gap-2 rounded-xl bg-white p-4 shadow-sm">
+              <input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="rounded-lg border border-lavender px-4 py-2"
+              />
+              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+                Estimated minutes
+                <input
+                  type="number"
+                  min={1}
+                  value={editEstimatedMinutes}
+                  onChange={(e) => setEditEstimatedMinutes(Number(e.target.value))}
+                  className="rounded-lg border border-lavender px-4 py-2"
+                />
+              </label>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => handleDone(task.id)}
-                  aria-label={`Mark ${task.title} done`}
-                  className="rounded-full bg-lavender px-3 py-1 text-sm text-white"
+                  onClick={() => saveEdit(task.id)}
+                  className="rounded-full bg-pink px-4 py-1 text-sm font-medium text-white"
                 >
-                  Done
+                  Save changes
                 </button>
-              )}
-              <button
-                onClick={() => handleDelete(task.id, task.title)}
-                aria-label={`Delete ${task.title}`}
-                className="rounded-full border border-lavender px-3 py-1 text-sm text-lavender-dark"
-              >
-                Delete
-              </button>
-            </div>
-          </li>
-        ))}
+                <button
+                  onClick={cancelEdit}
+                  className="rounded-full border border-lavender px-4 py-1 text-sm text-lavender-dark"
+                >
+                  Cancel
+                </button>
+              </div>
+            </li>
+          ) : (
+            <li key={task.id} className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm">
+              <span className={task.status === "done" ? "text-slate-400 line-through" : ""}>{task.title}</span>
+              <div className="flex gap-2">
+                {task.status !== "done" && (
+                  <button
+                    onClick={() => handleDone(task.id)}
+                    aria-label={`Mark ${task.title} done`}
+                    className="rounded-full bg-lavender px-3 py-1 text-sm text-white"
+                  >
+                    Done
+                  </button>
+                )}
+                <button
+                  onClick={() => startEdit(task)}
+                  aria-label={`Edit ${task.title}`}
+                  className="rounded-full border border-lavender px-3 py-1 text-sm text-lavender-dark"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(task.id)}
+                  aria-label={`Delete ${task.title}`}
+                  className="rounded-full border border-lavender px-3 py-1 text-sm text-lavender-dark"
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ),
+        )}
       </ul>
     </div>
   );
@@ -1271,7 +1367,7 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
 - [ ] **Step 4: Run and verify pass**
 
 Run: `npx vitest run tests/app/task-list.test.tsx`
-Expected: PASS (3/3)
+Expected: PASS (5/5)
 
 - [ ] **Step 5: Build the server page**
 
@@ -1308,7 +1404,7 @@ export default async function TasksPage() {
 
 ```bash
 git add src/app/tasks tests/app/task-list.test.tsx
-git commit -m "feat: add /tasks page with add, delete, and mark-done"
+git commit -m "feat: add /tasks page with add, edit, delete, and mark-done"
 ```
 
 ---
