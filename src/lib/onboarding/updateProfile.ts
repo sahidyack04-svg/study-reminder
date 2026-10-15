@@ -38,6 +38,12 @@ export async function updateStudentProfile(
     todayInTimezone(changes.timezone ?? profile.timezone),
   );
 
+  const hasGuardianOnFile = !!profile.guardian;
+  const guardianProvidedNow = !!changes.guardian;
+  if (guardianNowRequired && !hasGuardianOnFile && !guardianProvidedNow) {
+    return { success: false, error: "A guardian name and email are required for students under 18." };
+  }
+
   const guardianInfoChanged =
     !!changes.guardian &&
     (changes.guardian.name !== profile.guardian?.name || changes.guardian.email !== profile.guardian?.email);

@@ -44,4 +44,19 @@ describe("updateStudentProfile", () => {
     await updateStudentProfile("u1", { guardian: { name: "Old Parent", email: "new@example.test" } });
     expect(requestGuardianConsent).toHaveBeenCalledWith("p1", { name: "Old Parent", email: "new@example.test" });
   });
+
+  it("rejects a DOB edit that makes the student newly under 18 when no guardian is on file and none is supplied", async () => {
+    (prisma.studentProfile.findUnique as any).mockResolvedValue({
+      id: "p1",
+      dateOfBirth: new Date("2000-01-01"),
+      guardian: null,
+    });
+    const result = await updateStudentProfile("u1", { dateOfBirth: "2015-01-01" });
+    expect(result).toEqual({
+      success: false,
+      error: "A guardian name and email are required for students under 18.",
+    });
+    expect(prisma.studentProfile.update).not.toHaveBeenCalled();
+    expect(requestGuardianConsent).not.toHaveBeenCalled();
+  });
 });

@@ -31,6 +31,11 @@ export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEdit
     }
   }
 
+  const isMinor = form.dateOfBirth
+    ? new Date().getFullYear() - new Date(form.dateOfBirth).getFullYear() < 19 // rough client-side hint only; the server re-checks the exact rule
+    : false;
+  const showGuardianFields = !!guardianStatus || isMinor;
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm">
       <label className="flex flex-col gap-1">
@@ -83,13 +88,21 @@ export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEdit
         />
       </label>
 
-      {guardianStatus && (
+      {showGuardianFields && (
         <div className="rounded-lg bg-blush p-4">
-          <p className="mb-2 text-sm text-slate-600">
-            Guardian: {guardianStatus.email} — {guardianStatus.approved ? "approved" : "pending approval"}
-          </p>
+          {guardianStatus ? (
+            <p className="mb-2 text-sm text-slate-600">
+              Guardian: {guardianStatus.email} — {guardianStatus.approved ? "approved" : "pending approval"}
+            </p>
+          ) : (
+            <p className="mb-2 text-sm text-slate-600">
+              Since you may be under 18, we need a guardian&apos;s name and email to approve your account.
+            </p>
+          )}
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-slate-700">Update guardian name</span>
+            <span className="text-sm font-medium text-slate-700">
+              {guardianStatus ? "Update guardian name" : "Guardian name"}
+            </span>
             <input
               value={form.guardian?.name ?? ""}
               onChange={(e) => update("guardian", { name: e.target.value, email: form.guardian?.email ?? "" })}
@@ -97,7 +110,9 @@ export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEdit
             />
           </label>
           <label className="mt-2 flex flex-col gap-1">
-            <span className="text-sm font-medium text-slate-700">Update guardian email</span>
+            <span className="text-sm font-medium text-slate-700">
+              {guardianStatus ? "Update guardian email" : "Guardian email"}
+            </span>
             <input
               value={form.guardian?.email ?? ""}
               onChange={(e) => update("guardian", { name: form.guardian?.name ?? "", email: e.target.value })}
@@ -105,7 +120,9 @@ export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEdit
             />
           </label>
           <p className="mt-2 text-xs text-slate-500">
-            Changing the guardian&apos;s name or email will re-send a consent request.
+            {guardianStatus
+              ? "Changing the guardian's name or email will re-send a consent request."
+              : "Saving will send your guardian a consent request."}
           </p>
         </div>
       )}
