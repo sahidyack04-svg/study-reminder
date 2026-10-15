@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
+import { getCurrentSessionUser } from "@/lib/auth/session";
 import { requiresGuardianConsent, todayInTimezone } from "@/lib/validation/age";
 import { requestGuardianConsent } from "./guardianConsent";
 
@@ -17,11 +18,17 @@ export interface ProfileEditableFields {
 }
 
 export async function updateStudentProfile(
-  userId: string,
   changes: Partial<ProfileEditableFields>,
 ): Promise<{ success: boolean; error?: string }> {
+  // This is a reachable server action: never trust a client-supplied user id.
+  // The owning user is resolved from the session before any work happens.
+  const user = await getCurrentSessionUser();
+  if (!user) {
+    return { success: false, error: "You must be signed in to update your profile." };
+  }
+
   const profile = await prisma.studentProfile.findUnique({
-    where: { userId },
+    where: { userId: user.id },
     include: { guardian: true },
   });
   if (!profile) {
@@ -49,7 +56,7 @@ export async function updateStudentProfile(
     (changes.guardian.name !== profile.guardian?.name || changes.guardian.email !== profile.guardian?.email);
 
   await prisma.studentProfile.update({
-    where: { userId },
+    where: { userId: user.id },
     data: {
       ...(changes.name && { name: changes.name }),
       ...(changes.dateOfBirth && { dateOfBirth: newDob }),

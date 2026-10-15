@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import { updateStudentProfile, type ProfileEditableFields } from "@/lib/onboarding/updateProfile";
+import { resendGuardianConsentForCurrentUser } from "@/lib/onboarding/guardianConsentActions";
+import { requiresGuardianConsent } from "@/lib/validation/age";
 
 export interface ProfileEditFormProps {
-  userId: string;
   initial: ProfileEditableFields;
   guardianStatus: { email: string; approved: boolean } | null;
 }
 
-export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEditFormProps) {
+export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProps) {
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [resendError, setResendError] = useState<string | null>(null);
 
   function update<K extends keyof ProfileEditableFields>(key: K, value: ProfileEditableFields[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -22,7 +25,7 @@ export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEdit
     e.preventDefault();
     setStatus("saving");
     setError(null);
-    const result = await updateStudentProfile(userId, form);
+    const result = await updateStudentProfile(form);
     if (result.success) {
       setStatus("saved");
     } else {
@@ -31,9 +34,27 @@ export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEdit
     }
   }
 
-  const isMinor = form.dateOfBirth
-    ? new Date().getFullYear() - new Date(form.dateOfBirth).getFullYear() < 19 // rough client-side hint only; the server re-checks the exact rule
-    : false;
+  async function handleResendConsent() {
+    setResendStatus("sending");
+    setResendError(null);
+    try {
+      const result = await resendGuardianConsentForCurrentUser();
+      if (result.success) {
+        setResendStatus("sent");
+      } else {
+        setResendStatus("error");
+        setResendError(result.error ?? "Something went wrong.");
+      }
+    } catch {
+      setResendStatus("error");
+      setResendError("Something went wrong. Please try again.");
+    }
+  }
+
+  // Client-side hint only, using the exact same age threshold the server uses
+  // (asOf defaults to the browser's local now). The server re-validates
+  // authoritatively against the student's declared timezone regardless.
+  const isMinor = form.dateOfBirth ? requiresGuardianConsent(new Date(form.dateOfBirth)) : false;
   const showGuardianFields = !!guardianStatus || isMinor;
 
   return (
@@ -124,6 +145,24 @@ export function ProfileEditForm({ userId, initial, guardianStatus }: ProfileEdit
               ? "Changing the guardian's name or email will re-send a consent request."
               : "Saving will send your guardian a consent request."}
           </p>
+          {guardianStatus && !guardianStatus.approved && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handleResendConsent}
+                disabled={resendStatus === "sending"}
+                className="rounded-full border border-lavender px-4 py-2 text-sm text-lavender-dark disabled:opacity-60"
+              >
+                {resendStatus === "sending" ? "Sending..." : "Resend consent email"}
+              </button>
+              {resendStatus === "sent" && (
+                <p className="mt-2 text-sm text-green-700">Consent email sent again.</p>
+              )}
+              {resendStatus === "error" && resendError && (
+                <p className="mt-2 text-sm text-red-600">{resendError}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

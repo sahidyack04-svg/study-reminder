@@ -3,9 +3,9 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import GuardianConsentPage from "@/app/guardian-consent/[token]/page";
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ token: "t1" }) }));
-vi.mock("@/lib/onboarding/guardianConsent", () => ({ approveGuardianConsent: vi.fn() }));
+vi.mock("@/lib/onboarding/guardianConsentActions", () => ({ approveGuardianConsent: vi.fn() }));
 
-import { approveGuardianConsent } from "@/lib/onboarding/guardianConsent";
+import { approveGuardianConsent } from "@/lib/onboarding/guardianConsentActions";
 
 describe("GuardianConsentPage", () => {
   it("shows the approval confirmation after clicking approve", async () => {

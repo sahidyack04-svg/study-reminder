@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { completeOnboarding, type OnboardingInput } from "@/lib/onboarding/completeOnboarding";
+import { requiresGuardianConsent } from "@/lib/validation/age";
 
 const STEPS = ["Basics", "Subjects", "Timetable", "Availability", "Goals", "Reminders"] as const;
 
-export function OnboardingWizard({ userId }: { userId: string }) {
+export function OnboardingWizard() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState<Omit<OnboardingInput, "userId">>({
+  const [form, setForm] = useState<OnboardingInput>({
     name: "",
     dateOfBirth: "",
     grade: "",
@@ -39,7 +40,7 @@ export function OnboardingWizard({ userId }: { userId: string }) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await completeOnboarding({ userId, ...form });
+      const result = await completeOnboarding(form);
       if (result.success) {
         router.push("/dashboard");
       } else {
@@ -52,9 +53,10 @@ export function OnboardingWizard({ userId }: { userId: string }) {
     }
   }
 
-  const isMinor = form.dateOfBirth
-    ? new Date().getFullYear() - new Date(form.dateOfBirth).getFullYear() < 19 // rough client-side hint only; the server re-checks the exact rule
-    : false;
+  // Client-side hint only, using the exact same age threshold the server uses
+  // (asOf defaults to the browser's local now). The server re-validates
+  // authoritatively against the student's declared timezone regardless.
+  const isMinor = form.dateOfBirth ? requiresGuardianConsent(new Date(form.dateOfBirth)) : false;
 
   const basicsComplete =
     form.name.trim() !== "" &&

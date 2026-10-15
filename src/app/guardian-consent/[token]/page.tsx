@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { approveGuardianConsent } from "@/lib/onboarding/guardianConsent";
+import { approveGuardianConsent } from "@/lib/onboarding/guardianConsentActions";
 
 export default function GuardianConsentPage() {
   const params = useParams<{ token: string }>();

@@ -1,12 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
+import { getCurrentSessionUser } from "@/lib/auth/session";
 import { requiresGuardianConsent, todayInTimezone } from "@/lib/validation/age";
 import { hasOverlap } from "@/lib/validation/timetable";
 import { requestGuardianConsent } from "./guardianConsent";
 
 export interface OnboardingInput {
-  userId: string;
   name: string;
   dateOfBirth: string;
   grade: string;
@@ -32,6 +32,13 @@ export interface OnboardingResult {
 }
 
 export async function completeOnboarding(input: OnboardingInput): Promise<OnboardingResult> {
+  // This is a reachable server action: never trust a client-supplied user id.
+  // The owning user is resolved from the session before any work happens.
+  const user = await getCurrentSessionUser();
+  if (!user) {
+    return { success: false, error: "You must be signed in to complete onboarding." };
+  }
+
   if (hasOverlap(input.timetable)) {
     return {
       success: false,
@@ -49,7 +56,7 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
     const profile = await prisma.$transaction(async (tx) => {
       const created = await tx.studentProfile.create({
         data: {
-          userId: input.userId,
+          userId: user.id,
           name: input.name,
           dateOfBirth: dob,
           grade: input.grade,

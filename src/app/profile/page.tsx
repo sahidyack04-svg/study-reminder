@@ -17,7 +17,6 @@ export default async function ProfilePage() {
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="mb-8 text-2xl font-semibold text-pink-dark">Your profile</h1>
       <ProfileEditForm
-        userId={user.id}
         initial={{
           name: profile.name,
           dateOfBirth: profile.dateOfBirth.toISOString().slice(0, 10),

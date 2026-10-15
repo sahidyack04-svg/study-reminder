@@ -1,6 +1,12 @@
+import { notFound } from "next/navigation";
 import { getDevEmails } from "@/lib/email/devStore";
 
 export default function DevEmailsPage() {
+  // This dev inbox exposes every verification/reset/consent link it has
+  // logged, unauthenticated. It must never exist in a production build,
+  // regardless of whether an email provider happens to be configured.
+  if (process.env.NODE_ENV === "production") notFound();
+
   if (process.env.RESEND_API_KEY) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">

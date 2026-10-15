@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { verifyEmailToken } from "@/lib/auth/verifyEmail";
+import { verifyEmailToken, resendVerificationEmail } from "@/lib/auth/verifyEmail";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -11,6 +11,8 @@ function VerifyEmailContent() {
 
   const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
 
   async function handleVerify() {
     if (!token) return;
@@ -29,8 +31,49 @@ function VerifyEmailContent() {
     }
   }
 
+  async function handleResend(e: React.FormEvent) {
+    e.preventDefault();
+    await resendVerificationEmail(email);
+    setSent(true);
+  }
+
   if (!token) {
-    return <p className="text-slate-600">Check your email for a verification link to activate your account.</p>;
+    if (sent) {
+      return (
+        <p className="text-slate-600">
+          If an account exists for <strong>{email}</strong> and isn&apos;t verified yet, we&apos;ve sent a
+          new link.
+        </p>
+      );
+    }
+
+    return (
+      <>
+        <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Verify your email</h1>
+        <p className="mb-6 text-slate-600">
+          Check your email for a verification link to activate your account. Link expired or never
+          arrived? Enter your email and we&apos;ll send a new one.
+        </p>
+        <form onSubmit={handleResend} className="flex flex-col gap-4 text-left">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-slate-700">Email</span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-lg border border-lavender px-4 py-2"
+            />
+          </label>
+          <button
+            type="submit"
+            className="mt-2 rounded-full bg-pink px-6 py-3 font-medium text-white hover:bg-pink-dark"
+          >
+            Resend verification email
+          </button>
+        </form>
+      </>
+    );
   }
 
   if (status === "success") {

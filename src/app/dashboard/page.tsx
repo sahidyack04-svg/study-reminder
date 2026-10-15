@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { getDashboardBannerState } from "@/lib/dashboard/bannerState";
+import { SignOutButton } from "./SignOutButton";
 
 export default async function DashboardPage() {
   const user = await getCurrentSessionUser();
@@ -25,7 +26,10 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <h1 className="mb-2 text-3xl font-semibold text-pink-dark">Hi {profile.name} 👋</h1>
+      <div className="mb-2 flex items-start justify-between gap-4">
+        <h1 className="text-3xl font-semibold text-pink-dark">Hi {profile.name} 👋</h1>
+        <SignOutButton />
+      </div>
       <p className="mb-8 text-slate-600">
         {profile.schoolName} · Grade {profile.grade} · {profile.curriculum}
       </p>

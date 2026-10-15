@@ -3,13 +3,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/db/prisma", () => ({
   prisma: { user: { findUnique: vi.fn() } },
 }));
+vi.mock("@/lib/security/rateLimit", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+}));
 
 import { prisma } from "@/lib/db/prisma";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 import { verifyCredentials } from "@/lib/auth/verifyCredentials";
 import bcrypt from "bcryptjs";
 
 describe("verifyCredentials", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (checkRateLimit as any).mockResolvedValue({ allowed: true });
+  });
+
+  it("returns null without touching the database once the login rate limit trips", async () => {
+    (checkRateLimit as any).mockResolvedValue({ allowed: false });
+    expect(await verifyCredentials("student@example.test", "correct-horse-1")).toBeNull();
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
 
   it("returns null for an unknown email", async () => {
     (prisma.user.findUnique as any).mockResolvedValue(null);

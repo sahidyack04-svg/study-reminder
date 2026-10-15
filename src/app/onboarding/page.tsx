@@ -10,5 +10,5 @@ export default async function OnboardingPage() {
   const existingProfile = await prisma.studentProfile.findUnique({ where: { userId: user.id } });
   if (existingProfile) redirect("/dashboard");
 
-  return <OnboardingWizard userId={user.id} />;
+  return <OnboardingWizard />;
 }

@@ -13,14 +13,15 @@ vi.mock("@/lib/db/prisma", () => {
   return { prisma: prismaMock };
 });
 vi.mock("@/lib/onboarding/guardianConsent", () => ({ requestGuardianConsent: vi.fn() }));
+vi.mock("@/lib/auth/session", () => ({ getCurrentSessionUser: vi.fn() }));
 
 import { prisma } from "@/lib/db/prisma";
 import { requestGuardianConsent } from "@/lib/onboarding/guardianConsent";
+import { getCurrentSessionUser } from "@/lib/auth/session";
 import { completeOnboarding, type OnboardingInput } from "@/lib/onboarding/completeOnboarding";
 
 function baseInput(overrides: Partial<OnboardingInput> = {}): OnboardingInput {
   return {
-    userId: "u1",
     name: "Alex",
     dateOfBirth: "2010-01-01",
     grade: "9",
@@ -39,7 +40,24 @@ function baseInput(overrides: Partial<OnboardingInput> = {}): OnboardingInput {
 }
 
 describe("completeOnboarding", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (getCurrentSessionUser as any).mockResolvedValue({
+      id: "u1",
+      email: "a@example.test",
+      emailVerified: new Date(),
+    });
+  });
+
+  it("refuses to write anything when there is no session", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(null);
+    const result = await completeOnboarding(baseInput());
+    expect(result).toEqual({
+      success: false,
+      error: "You must be signed in to complete onboarding.",
+    });
+    expect(prisma.studentProfile.create).not.toHaveBeenCalled();
+  });
 
   it("rejects overlapping timetable entries before writing anything", async () => {
     const input = baseInput({
@@ -85,6 +103,26 @@ describe("completeOnboarding", () => {
     expect(result.success).toBe(true);
     expect(result.guardianConsentRequired).toBe(true);
     expect(requestGuardianConsent).toHaveBeenCalledWith("p1", { name: "Parent", email: "parent@example.test" });
+  });
+
+  it("writes the profile against the session's user id, not any client-supplied value", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue({
+      id: "session-user",
+      email: "a@example.test",
+      emailVerified: new Date(),
+    });
+    (prisma.studentProfile.create as any).mockResolvedValue({ id: "p1", subjects: [] });
+
+    const result = await completeOnboarding({
+      ...baseInput({ dateOfBirth: "2000-01-01" }),
+      // an attacker POSTing an extra userId field must have no effect
+      userId: "victim-user",
+    } as OnboardingInput);
+
+    expect(result.success).toBe(true);
+    expect(prisma.studentProfile.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ userId: "session-user" }) }),
+    );
   });
 
   it("returns a friendly error instead of throwing when a write fails partway through", async () => {

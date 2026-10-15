@@ -1,4 +1,16 @@
-"use server";
+// NOTE: there is deliberately NO "use server" directive in this file.
+//
+// A file-level directive would turn EVERY export here into an independently
+// reachable RPC endpoint — including requestGuardianConsent, which is only
+// ever called by other server-side code and returns the full Guardian record
+// (consentToken included). A client could otherwise POST to it directly with
+// an arbitrary studentProfileId and read back another student's consent token.
+//
+// The functions that genuinely need to be callable from a client component
+// live in ./guardianConsentActions.ts, which is the single "use server"
+// boundary. (A function-level "use server" directive can't be used here:
+// Next.js rejects inline server actions in any module reachable from a client
+// component, and this module is in ProfileEditForm's import graph.)
 
 import { prisma } from "@/lib/db/prisma";
 import { generateToken } from "@/lib/validation/tokens";
@@ -39,19 +51,4 @@ export async function requestGuardianConsent(
   });
 
   return record;
-}
-
-export async function approveGuardianConsent(
-  token: string,
-): Promise<{ success: boolean; error?: string; alreadyApproved?: boolean }> {
-  const guardian = await prisma.guardian.findUnique({ where: { consentToken: token } });
-  if (!guardian) {
-    return { success: false, error: "This consent link is invalid." };
-  }
-  if (guardian.consentGivenAt) {
-    return { success: true, alreadyApproved: true };
-  }
-
-  await prisma.guardian.update({ where: { id: guardian.id }, data: { consentGivenAt: new Date() } });
-  return { success: true };
 }
