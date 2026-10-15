@@ -19,17 +19,21 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     return { success: true }; // still don't reveal anything; just silently skip sending
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (user) {
-    const token = generateToken();
-    await prisma.verificationToken.create({
-      data: { token: hashToken(token), userId: user.id, purpose: "password_reset", expiresAt: tokenExpiryDate(1) },
-    });
-    await sendEmail({
-      to: email,
-      subject: "Reset your Study Reminder password",
-      body: `Reset your password here: ${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`,
-    });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user) {
+      const token = generateToken();
+      await prisma.verificationToken.create({
+        data: { token: hashToken(token), userId: user.id, purpose: "password_reset", expiresAt: tokenExpiryDate(1) },
+      });
+      await sendEmail({
+        to: email,
+        subject: "Reset your Study Reminder password",
+        body: `Reset your password here: ${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`,
+      });
+    }
+  } catch (err) {
+    console.error("[requestPasswordReset] failed to process password reset request:", err);
   }
   return { success: true };
 }

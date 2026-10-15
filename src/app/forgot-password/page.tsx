@@ -9,7 +9,12 @@ export default function ForgotPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await requestPasswordReset(email);
+    try {
+      await requestPasswordReset(email);
+    } catch {
+      // requestPasswordReset never throws, but guard against a genuine
+      // client-side network failure reaching the server action.
+    }
     setSent(true);
   }
 

@@ -31,6 +31,16 @@ describe("requestPasswordReset", () => {
     await requestPasswordReset("a@example.test");
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "a@example.test" }));
   });
+
+  it("still reports success without throwing when the token creation fails", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "u1", email: "a@example.test" });
+    (prisma.verificationToken.create as any).mockRejectedValue(new Error("db error"));
+
+    const result = await requestPasswordReset("a@example.test");
+
+    expect(result.success).toBe(true);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
 });
 
 describe("resetPassword", () => {

@@ -7,17 +7,34 @@ export interface SendEmailInput {
   body: string;
 }
 
-export async function sendEmail({ to, subject, body }: SendEmailInput): Promise<{ delivered: boolean }> {
+export async function sendEmail({
+  to,
+  subject,
+  body,
+}: SendEmailInput): Promise<{ delivered: boolean; reason?: "no_provider" | "provider_error" }> {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
     recordDevEmail({ to, subject, body });
     console.log(`[dev email] to=${to} subject="${subject}"\n${body}`);
-    return { delivered: false };
+    return { delivered: false, reason: "no_provider" };
   }
 
   const resend = new Resend(apiKey);
   const from = process.env.RESEND_FROM_EMAIL ?? "Study Reminder <onboarding@resend.dev>";
-  await resend.emails.send({ from, to, subject, text: body });
-  return { delivered: true };
+
+  try {
+    const result = await resend.emails.send({ from, to, subject, text: body });
+    if (result.error) {
+      console.error(
+        `[email send error] to=${to} subject="${subject}" name=${result.error.name} message=${result.error.message}`,
+      );
+      return { delivered: false, reason: "provider_error" };
+    }
+    return { delivered: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[email send error] to=${to} subject="${subject}" message=${message}`);
+    return { delivered: false, reason: "provider_error" };
+  }
 }
