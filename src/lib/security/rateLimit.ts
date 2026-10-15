@@ -14,14 +14,17 @@ export async function checkRateLimit({
   windowMs,
 }: RateLimitOptions): Promise<{ allowed: boolean }> {
   const windowStart = new Date(Date.now() - windowMs);
-  const count = await prisma.rateLimitAttempt.count({
-    where: { action, identifier, createdAt: { gte: windowStart } },
+
+  return prisma.$transaction(async (tx) => {
+    const count = await tx.rateLimitAttempt.count({
+      where: { action, identifier, createdAt: { gte: windowStart } },
+    });
+
+    if (count >= maxAttempts) {
+      return { allowed: false };
+    }
+
+    await tx.rateLimitAttempt.create({ data: { action, identifier } });
+    return { allowed: true };
   });
-
-  if (count >= maxAttempts) {
-    return { allowed: false };
-  }
-
-  await prisma.rateLimitAttempt.create({ data: { action, identifier } });
-  return { allowed: true };
 }

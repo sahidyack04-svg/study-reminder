@@ -24,4 +24,13 @@ describe("checkRateLimit", () => {
     const result = await checkRateLimit({ action: "signup", identifier, maxAttempts: 1, windowMs: 60_000 });
     expect(result.allowed).toBe(true);
   });
+
+  it("never allows more than maxAttempts through under concurrent calls (TOCTOU regression guard)", async () => {
+    const options = { action: "signup", identifier, maxAttempts: 3, windowMs: 60_000 };
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => checkRateLimit(options)),
+    );
+    const allowedCount = results.filter((r) => r.allowed).length;
+    expect(allowedCount).toBe(3);
+  });
 });
