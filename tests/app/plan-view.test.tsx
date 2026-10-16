@@ -31,4 +31,21 @@ describe("PlanView", () => {
     render(<PlanView entries={carried} capacityMinutes={60} />);
     expect(screen.getByText(/carried over/i)).toBeInTheDocument();
   });
+
+  it("shows an error message when checking in an entry fails", async () => {
+    (checkInPlanEntry as any).mockResolvedValue({ success: false, error: "Plan entry not found." });
+    render(<PlanView entries={entries} capacityMinutes={60} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /mark algebra worksheet done/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/plan entry not found/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows a different message when caught up with no entries but real availability", () => {
+    render(<PlanView entries={[]} capacityMinutes={60} />);
+    expect(screen.getByText(/all caught up/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no study time set for today/i)).not.toBeInTheDocument();
+  });
 });
