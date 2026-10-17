@@ -10,6 +10,7 @@ vi.mock("@/lib/auth/session", () => ({ getCurrentSessionUser: vi.fn() }));
 
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentSessionUser } from "@/lib/auth/session";
+import { todayInTimezone } from "@/lib/validation/age";
 import { getProgressData, getCurrentStreak } from "@/lib/progress/progressService";
 
 const sessionUser = { id: "u1", email: "s@example.test", emailVerified: new Date() };
@@ -90,5 +91,29 @@ describe("getCurrentStreak", () => {
     const call = (prisma.planEntry.findMany as any).mock.calls[0][0];
     const spanDays = (new Date().getTime() - call.where.date.gte.getTime()) / (24 * 60 * 60 * 1000);
     expect(spanDays).toBeGreaterThan(30);
+  });
+
+  it("treats a missing-today as empty rather than letting yesterday masquerade as today", async () => {
+    // Regression test: today has NO PlanEntry rows yet (plan not generated),
+    // yesterday has a pending (unchecked) entry, and two days ago is fully
+    // done. If "today" is correctly recognized as index 0 (empty, skipped),
+    // yesterday is correctly recognized as a PAST day whose pending entry
+    // breaks the streak before "two days ago" is ever reached -> streak 0.
+    // If today is silently absent and yesterday wrongly sorts into index 0,
+    // yesterday gets the lenient "pending today" treatment instead, the
+    // streak doesn't break, and "two days ago" wrongly counts -> streak 1.
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+
+    const today = todayInTimezone(profile.timezone);
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+    (prisma.planEntry.findMany as any).mockResolvedValue([
+      { date: twoDaysAgo, subjectId: "s1", subject: { name: "Math" }, estimatedMinutes: 30, checkInStatus: "done" },
+      { date: yesterday, subjectId: "s1", subject: { name: "Math" }, estimatedMinutes: 30, checkInStatus: "pending" },
+    ]);
+
+    expect(await getCurrentStreak()).toBe(0);
   });
 });

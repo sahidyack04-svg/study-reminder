@@ -68,6 +68,20 @@ export async function getCurrentStreak(): Promise<number> {
   });
 
   const byDate = groupByDate(entries);
+
+  // groupByDate only produces a DayEntries for dates that actually have
+  // PlanEntry rows. If today has zero rows yet (e.g. the daily plan hasn't
+  // been generated), today would be silently absent here, and the most
+  // recent PAST day would wrongly sort to index 0 and be treated as "today"
+  // by computeStreak's lenient pending-day rule. Make sure today is always
+  // present -- with an empty entries array if it genuinely has no rows yet --
+  // so computeStreak's own zero-entries handling (skip, don't break) applies
+  // to today instead.
+  const todayKey = today.toISOString();
+  if (!byDate.some((day) => day.date.toISOString() === todayKey)) {
+    byDate.push({ date: today, entries: [] });
+  }
+
   byDate.sort((a, b) => b.date.getTime() - a.date.getTime()); // today first
 
   return computeStreak(byDate);
