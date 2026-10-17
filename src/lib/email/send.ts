@@ -18,7 +18,9 @@ export async function sendEmail({
 
   if (!apiKey) {
     recordDevEmail({ to, subject, body, html });
-    console.log(`[dev email] to=${to} subject="${subject}"\n${body}`);
+    // Body is never logged here, even in dev: it can carry a raw reset/verification
+    // token. The full content is available at /dev/emails for local debugging.
+    console.log(`[dev email] to=${to} subject="${subject}" — view at /dev/emails`);
     return { delivered: false, reason: "no_provider" };
   }
 
