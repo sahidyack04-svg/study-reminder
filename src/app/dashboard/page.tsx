@@ -6,6 +6,7 @@ import { getDashboardBannerState } from "@/lib/dashboard/bannerState";
 import { listTasks } from "@/lib/tasks/tasks";
 import { getOrGeneratePlanForDate } from "@/lib/plan/planService";
 import { getPlanDayStatus } from "@/lib/plan/planDayStatus";
+import { getCurrentStreak } from "@/lib/progress/progressService";
 import { SignOutButton } from "./SignOutButton";
 
 export default async function DashboardPage() {
@@ -26,6 +27,7 @@ export default async function DashboardPage() {
   const planEntryCount = planEntries.length;
   const planDoneCount = (planEntries as { checkInStatus: string }[]).filter((e) => e.checkInStatus === "done").length;
   const planDayStatus = getPlanDayStatus(planEntryCount, planCapacityMinutes);
+  const streak = await getCurrentStreak();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
@@ -75,8 +77,14 @@ export default async function DashboardPage() {
         </Link>
       </section>
 
-      <section className="mb-4 rounded-xl border border-dashed border-lavender p-6 text-slate-500">
-        Progress reports is coming in a later phase.
+      <section className="mb-4 rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="mb-2 text-lg font-medium text-lavender-dark">Progress</h2>
+        <p className="text-slate-600">
+          {streak > 0 ? `${streak}-day check-in streak.` : "No check-in streak yet — visit your plan to get started."}
+        </p>
+        <Link href="/progress" className="mt-2 inline-block text-sm text-lavender-dark underline">
+          View your progress
+        </Link>
       </section>
     </main>
   );
