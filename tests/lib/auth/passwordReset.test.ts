@@ -13,6 +13,7 @@ vi.mock("@/lib/security/rateLimit", () => ({ checkRateLimit: vi.fn().mockResolve
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { revokeAllSessions } from "@/lib/auth/revokeSessions";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 import { hashToken } from "@/lib/validation/tokens";
 import { requestPasswordReset, resetPassword } from "@/lib/auth/passwordReset";
 
@@ -29,7 +30,14 @@ describe("requestPasswordReset", () => {
   it("sends a reset email for a known address", async () => {
     (prisma.user.findUnique as any).mockResolvedValue({ id: "u1", email: "a@example.test" });
     await requestPasswordReset("a@example.test");
-    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "a@example.test" }));
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "a@example.test",
+        subject: "Reset your Study Reminder password",
+        body: expect.stringContaining("/reset-password?token="),
+        html: expect.stringContaining("/reset-password?token="),
+      }),
+    );
   });
 
   it("still reports success without throwing when the token creation fails", async () => {
@@ -40,6 +48,27 @@ describe("requestPasswordReset", () => {
 
     expect(result.success).toBe(true);
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("reports success without sending an email once the rate limit is exceeded, without revealing that to the caller", async () => {
+    (checkRateLimit as any).mockResolvedValueOnce({ allowed: false });
+
+    const result = await requestPasswordReset("a@example.test");
+
+    expect(result.success).toBe(true);
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("still reports success when the email provider fails to deliver", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "u1", email: "a@example.test" });
+    (prisma.verificationToken.create as any).mockResolvedValue({ id: "t1" });
+    (sendEmail as any).mockResolvedValue({ delivered: false, reason: "provider_error" });
+
+    const result = await requestPasswordReset("a@example.test");
+
+    expect(result.success).toBe(true);
+    expect(sendEmail).toHaveBeenCalled();
   });
 });
 

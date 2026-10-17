@@ -77,4 +77,20 @@ describe("sendEmail with a configured provider", () => {
     expect(result.delivered).toBe(true);
     expect(result.reason).toBeUndefined();
   });
+
+  it("forwards an optional html body to the provider alongside the plain text", async () => {
+    const sendSpy = vi.fn().mockResolvedValue({ data: { id: "some-id" }, error: null });
+    vi.doMock("resend", () => ({
+      Resend: class {
+        emails = { send: sendSpy };
+      },
+    }));
+
+    const { sendEmail } = await import("@/lib/email/send");
+    await sendEmail({ to: "student@example.test", subject: "Hi", body: "Body", html: "<p>Body</p>" });
+
+    expect(sendSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "student@example.test", text: "Body", html: "<p>Body</p>" }),
+    );
+  });
 });

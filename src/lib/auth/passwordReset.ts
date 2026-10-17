@@ -5,8 +5,11 @@ import { prisma } from "@/lib/db/prisma";
 import { validatePassword } from "@/lib/validation/password";
 import { generateToken, hashToken, tokenExpiryDate, isTokenExpired } from "@/lib/validation/tokens";
 import { sendEmail } from "@/lib/email/send";
+import { buildPasswordResetEmail } from "@/lib/email/templates/passwordReset";
 import { revokeAllSessions } from "@/lib/auth/revokeSessions";
 import { checkRateLimit } from "@/lib/security/rateLimit";
+
+const RESET_TOKEN_EXPIRY_HOURS = 1;
 
 export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
   const rateLimit = await checkRateLimit({
@@ -24,13 +27,19 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     if (user) {
       const token = generateToken();
       await prisma.verificationToken.create({
-        data: { token: hashToken(token), userId: user.id, purpose: "password_reset", expiresAt: tokenExpiryDate(1) },
+        data: {
+          token: hashToken(token),
+          userId: user.id,
+          purpose: "password_reset",
+          expiresAt: tokenExpiryDate(RESET_TOKEN_EXPIRY_HOURS),
+        },
       });
-      await sendEmail({
-        to: email,
-        subject: "Reset your Study Reminder password",
-        body: `Reset your password here: ${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`,
+      const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
+      const { subject, html, text } = buildPasswordResetEmail({
+        resetUrl,
+        expiryHours: RESET_TOKEN_EXPIRY_HOURS,
       });
+      await sendEmail({ to: email, subject, body: text, html });
     }
   } catch (err) {
     console.error("[requestPasswordReset] failed to process password reset request:", err);

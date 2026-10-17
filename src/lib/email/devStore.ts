@@ -2,6 +2,7 @@ export interface DevEmail {
   to: string;
   subject: string;
   body: string;
+  html?: string;
   sentAt: Date;
 }
 
