@@ -13,9 +13,10 @@ vi.mock("@/lib/auth/session", () => ({ getCurrentSessionUser: vi.fn() }));
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentSessionUser } from "@/lib/auth/session";
 import { listTasks, createTask, updateTask, deleteTask, markTaskDone } from "@/lib/tasks/tasks";
+import { todayInTimezone } from "@/lib/validation/age";
 
 const sessionUser = { id: "u1", email: "s@example.test", emailVerified: new Date() };
-const profile = { id: "p1", userId: "u1" };
+const profile = { id: "p1", userId: "u1", timezone: "UTC" };
 
 describe("listTasks", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -186,9 +187,30 @@ describe("markTaskDone — plan entry sync", () => {
     const result = await markTaskDone("t1");
     expect(result.success).toBe(true);
     expect(prisma.task.update).toHaveBeenCalledWith({ where: { id: "t1" }, data: { status: "done" } });
+    const today = todayInTimezone(profile.timezone);
     expect(prisma.planEntry.updateMany).toHaveBeenCalledWith({
-      where: { taskId: "t1", checkInStatus: "pending" },
+      where: { taskId: "t1", studentProfileId: "p1", checkInStatus: "pending", date: today },
       data: { checkInStatus: "done" },
     });
+  });
+
+  it("only syncs today's plan entry, leaving past days' pending entries untouched", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.task.findUnique as any).mockResolvedValue({ id: "t1", studentProfileId: "p1" });
+    (prisma.task.update as any).mockResolvedValue({ id: "t1", status: "done" });
+
+    const today = todayInTimezone(profile.timezone);
+
+    const result = await markTaskDone("t1");
+    expect(result.success).toBe(true);
+    // The updateMany call must be scoped to today's date (not any pending entry
+    // for this task regardless of date — otherwise marking a task done from
+    // /tasks would silently flip untouched past days' plan history to "done").
+    expect(prisma.planEntry.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ date: today }),
+      }),
+    );
   });
 });

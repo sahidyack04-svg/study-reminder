@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentSessionUser } from "@/lib/auth/session";
+import { todayInTimezone } from "@/lib/validation/age";
 
 export interface TaskView {
   id: string;
@@ -146,8 +147,9 @@ export async function markTaskDone(taskId: string): Promise<{ success: boolean; 
   }
 
   await prisma.task.update({ where: { id: taskId }, data: { status: "done" } });
+  const today = todayInTimezone(profile.timezone);
   await prisma.planEntry.updateMany({
-    where: { taskId, checkInStatus: "pending" },
+    where: { taskId, studentProfileId: profile.id, checkInStatus: "pending", date: today },
     data: { checkInStatus: "done" },
   });
   return { success: true };

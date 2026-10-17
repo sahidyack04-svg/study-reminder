@@ -26,80 +26,77 @@ export async function getOrGeneratePlanForDate(): Promise<PlanDayView> {
   if (!profile) return { entries: [], capacityMinutes: 0 };
 
   const today = todayInTimezone(profile.timezone);
-
-  const existing = await prisma.planEntry.findMany({
-    where: { studentProfileId: profile.id, date: today },
-  });
-  if (existing.length > 0) {
-    const capacity = await capacityForDate(profile.id, today);
-    return { entries: existing, capacityMinutes: capacity };
-  }
-
   const capacityMinutes = await capacityForDate(profile.id, today);
 
-  const yesterday = previousDate(today);
-  const yesterdayEntries = await prisma.planEntry.findMany({
-    where: { studentProfileId: profile.id, date: yesterday },
-  });
-  const carryForward = yesterdayEntries
-    .filter((e) => e.taskId && (e.checkInStatus === "partial" || e.checkInStatus === "not_done"))
-    .map((e) => ({
-      taskId: e.taskId as string,
-      subjectId: e.subjectId,
-      title: e.title,
-      estimatedMinutes: e.estimatedMinutes,
-      fromDate: yesterday,
-    }));
-  const carryForwardTaskIds = new Set(carryForward.map((c) => c.taskId));
-
-  const openTasks = (
-    await prisma.task.findMany({ where: { studentProfileId: profile.id, status: "open" } })
-  ).filter((t) => !carryForwardTaskIds.has(t.id));
-
-  const fourteenDaysOut = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const openTaskGoalIds = new Set(
-    (await prisma.task.findMany({ where: { studentProfileId: profile.id, status: "open" } }))
-      .map((t) => t.subjectId)
-      .filter((id): id is string => !!id),
-  );
-  const eligibleGoals = (
-    await prisma.goal.findMany({
-      where: { studentProfileId: profile.id, examDate: { not: null, lte: fourteenDaysOut, gte: today } },
-      orderBy: { examDate: "asc" },
-    })
-  ).filter((g) => !g.subjectId || !openTaskGoalIds.has(g.subjectId));
-
-  const generated = generatePlanEntries({
-    capacityMinutes,
-    carryForward,
-    openTasks: openTasks.map((t) => ({
-      id: t.id,
-      subjectId: t.subjectId,
-      title: t.title,
-      dueDate: t.dueDate,
-      estimatedMinutes: t.estimatedMinutes,
-    })),
-    eligibleGoals: eligibleGoals.map((g) => ({ id: g.id, subjectId: g.subjectId, description: g.description })),
-  });
-
-  const created = [];
-  for (const entry of generated) {
-    const row = await prisma.planEntry.create({
-      data: {
-        studentProfileId: profile.id,
-        date: today,
-        taskId: entry.taskId,
-        goalId: entry.goalId,
-        subjectId: entry.subjectId,
-        title: entry.title,
-        estimatedMinutes: entry.estimatedMinutes,
-        carriedOverFromDate: entry.carriedOverFromDate,
-      },
+  const entries = await prisma.$transaction(async (tx) => {
+    const existing = await tx.planEntry.findMany({
+      where: { studentProfileId: profile.id, date: today },
     });
-    created.push(row);
-  }
+    if (existing.length > 0) return existing;
 
-  return { entries: created, capacityMinutes };
+    const yesterday = previousDate(today);
+    const yesterdayEntries = await tx.planEntry.findMany({
+      where: { studentProfileId: profile.id, date: yesterday },
+    });
+
+    const openTaskRows = await tx.task.findMany({ where: { studentProfileId: profile.id, status: "open" } });
+    const openTaskIds = new Set(openTaskRows.map((t) => t.id));
+
+    const carryForward = yesterdayEntries
+      .filter((e) => e.taskId && openTaskIds.has(e.taskId) && (e.checkInStatus === "partial" || e.checkInStatus === "not_done"))
+      .map((e) => ({
+        taskId: e.taskId as string,
+        subjectId: e.subjectId,
+        title: e.title,
+        estimatedMinutes: e.estimatedMinutes,
+        fromDate: yesterday,
+      }));
+    const carryForwardTaskIds = new Set(carryForward.map((c) => c.taskId));
+
+    const openTasks = openTaskRows.filter((t) => !carryForwardTaskIds.has(t.id));
+
+    const fourteenDaysOut = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const openTaskGoalIds = new Set(openTaskRows.map((t) => t.subjectId).filter((id): id is string => !!id));
+    const eligibleGoals = (
+      await tx.goal.findMany({
+        where: { studentProfileId: profile.id, examDate: { not: null, lte: fourteenDaysOut, gte: today } },
+        orderBy: { examDate: "asc" },
+      })
+    ).filter((g) => !g.subjectId || !openTaskGoalIds.has(g.subjectId));
+
+    const generated = generatePlanEntries({
+      capacityMinutes,
+      carryForward,
+      openTasks: openTasks.map((t) => ({
+        id: t.id,
+        subjectId: t.subjectId,
+        title: t.title,
+        dueDate: t.dueDate,
+        estimatedMinutes: t.estimatedMinutes,
+      })),
+      eligibleGoals: eligibleGoals.map((g) => ({ id: g.id, subjectId: g.subjectId, description: g.description })),
+    });
+
+    const created = [];
+    for (const entry of generated) {
+      const row = await tx.planEntry.create({
+        data: {
+          studentProfileId: profile.id,
+          date: today,
+          taskId: entry.taskId,
+          goalId: entry.goalId,
+          subjectId: entry.subjectId,
+          title: entry.title,
+          estimatedMinutes: entry.estimatedMinutes,
+          carriedOverFromDate: entry.carriedOverFromDate,
+        },
+      });
+      created.push(row);
+    }
+    return created;
+  });
+
+  return { entries, capacityMinutes };
 }
 
 async function capacityForDate(studentProfileId: string, date: Date): Promise<number> {

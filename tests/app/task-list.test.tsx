@@ -88,4 +88,39 @@ describe("TaskList", () => {
     expect(screen.getByText("Algebra worksheet")).toBeInTheDocument();
     expect(updateTask).not.toHaveBeenCalled();
   });
+
+  it("shows an error message when deleting a task fails", async () => {
+    (deleteTask as any).mockResolvedValue({ success: false, error: "Something went wrong." });
+    render(<TaskList initialTasks={initialTasks} subjects={subjects} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /delete algebra worksheet/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Something went wrong.")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Algebra worksheet")).toBeInTheDocument();
+  });
+
+  it("shows an error message when marking a task done fails", async () => {
+    (markTaskDone as any).mockResolvedValue({ success: false, error: "Something went wrong." });
+    render(<TaskList initialTasks={initialTasks} subjects={subjects} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /mark algebra worksheet done/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Something went wrong.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error message when saving an edit fails", async () => {
+    (updateTask as any).mockResolvedValue({ success: false, error: "Something went wrong." });
+    render(<TaskList initialTasks={initialTasks} subjects={subjects} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /edit algebra worksheet/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Something went wrong.")).toBeInTheDocument();
+    });
+  });
 });

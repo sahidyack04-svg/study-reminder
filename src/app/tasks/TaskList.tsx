@@ -48,16 +48,22 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
   }
 
   async function handleDelete(id: string) {
+    setError(null);
     const result = await deleteTask(id);
     if (result.success) {
       setTasks((prev) => prev.filter((t) => t.id !== id));
+    } else {
+      setError(result.error ?? "Something went wrong.");
     }
   }
 
   async function handleDone(id: string) {
+    setError(null);
     const result = await markTaskDone(id);
     if (result.success) {
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: "done" } : t)));
+    } else {
+      setError(result.error ?? "Something went wrong.");
     }
   }
 
@@ -72,12 +78,15 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
   }
 
   async function saveEdit(id: string) {
+    setError(null);
     const result = await updateTask(id, { title: editTitle, estimatedMinutes: editEstimatedMinutes });
     if (result.success) {
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, title: editTitle, estimatedMinutes: editEstimatedMinutes } : t)),
       );
       setEditingId(null);
+    } else {
+      setError(result.error ?? "Something went wrong.");
     }
   }
 

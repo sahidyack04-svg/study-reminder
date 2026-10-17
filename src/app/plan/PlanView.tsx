@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { checkInPlanEntry } from "@/lib/plan/planService";
+import { getPlanDayStatus } from "@/lib/plan/planDayStatus";
 
 interface PlanEntryView {
   id: string;
@@ -25,15 +27,18 @@ export function PlanView({ entries: initial, capacityMinutes }: { entries: PlanE
     }
   }
 
-  if (entries.length === 0 && capacityMinutes === 0) {
+  const planDayStatus = getPlanDayStatus(entries.length, capacityMinutes);
+
+  if (planDayStatus === "no-availability") {
     return (
       <p className="rounded-xl bg-blush p-4 text-sm text-slate-700">
-        No study time set for today. Add your weekly availability in your profile to get a personalized plan.
+        No study time set for today. Add your weekly availability in{" "}
+        <Link href="/profile" className="underline">your profile</Link> to get a personalized plan.
       </p>
     );
   }
 
-  if (entries.length === 0) {
+  if (planDayStatus === "caught-up") {
     return <p className="text-slate-500">No tasks or study blocks for today — you&apos;re all caught up.</p>;
   }
 

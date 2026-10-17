@@ -1,14 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/db/prisma", () => ({
-  prisma: {
+vi.mock("@/lib/db/prisma", () => {
+  const prisma: any = {
     studentProfile: { findUnique: vi.fn() },
     planEntry: { findMany: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     task: { findMany: vi.fn(), update: vi.fn() },
     goal: { findMany: vi.fn() },
     availabilityWindow: { findMany: vi.fn() },
-  },
-}));
+    $transaction: vi.fn(),
+  };
+  // The real $transaction wraps a check-then-write sequence so SQLite can
+  // serialize concurrent callers. For tests, `tx` is just `prisma` itself —
+  // we only care that the right calls happen in the right order, not that
+  // tx is a distinct client.
+  prisma.$transaction.mockImplementation((callback: any) => callback(prisma));
+  return { prisma };
+});
 vi.mock("@/lib/auth/session", () => ({ getCurrentSessionUser: vi.fn() }));
 
 import { prisma } from "@/lib/db/prisma";
@@ -71,6 +78,56 @@ describe("getOrGeneratePlanForDate", () => {
     expect(prisma.planEntry.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ studentProfileId: "p1", taskId: "t1", estimatedMinutes: 30 }),
+      }),
+    );
+  });
+
+  it("does not carry forward a partial entry whose task was already marked done outside the plan", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.planEntry.findMany as any)
+      .mockResolvedValueOnce([]) // today's existing entries: none
+      .mockResolvedValueOnce([
+        { id: "y1", taskId: "t1", subjectId: null, title: "Reading", estimatedMinutes: 30, checkInStatus: "partial" },
+      ]); // yesterday's entries: a partial entry for a task that is no longer open
+    (prisma.availabilityWindow.findMany as any).mockResolvedValue([
+      { dayOfWeek: 0, startTime: "17:00", endTime: "18:00" },
+    ]);
+    // The task behind yesterday's partial entry is now done, so it does not
+    // come back from the "open" query — it must not be resurrected.
+    (prisma.task.findMany as any).mockResolvedValue([]);
+    (prisma.goal.findMany as any).mockResolvedValue([]);
+
+    const result = await getOrGeneratePlanForDate();
+    expect(
+      (result.entries as { taskId?: string | null }[]).some((e) => e.taskId === "t1"),
+    ).toBe(false);
+    expect(prisma.planEntry.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ taskId: "t1" }) }),
+    );
+  });
+
+  it("carries forward a partial entry when its task is still open", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.planEntry.findMany as any)
+      .mockResolvedValueOnce([]) // today's existing entries: none
+      .mockResolvedValueOnce([
+        { id: "y1", taskId: "t1", subjectId: null, title: "Reading", estimatedMinutes: 30, checkInStatus: "partial" },
+      ]); // yesterday's entries: a partial entry for a task that is still open
+    (prisma.availabilityWindow.findMany as any).mockResolvedValue([
+      { dayOfWeek: 0, startTime: "17:00", endTime: "18:00" },
+    ]);
+    (prisma.task.findMany as any).mockResolvedValue([
+      { id: "t1", subjectId: null, title: "Reading", dueDate: null, estimatedMinutes: 30, status: "open" },
+    ]);
+    (prisma.goal.findMany as any).mockResolvedValue([]);
+    (prisma.planEntry.create as any).mockResolvedValue({ id: "new-entry" });
+
+    await getOrGeneratePlanForDate();
+    expect(prisma.planEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ taskId: "t1", carriedOverFromDate: expect.anything() }),
       }),
     );
   });

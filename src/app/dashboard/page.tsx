@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getDashboardBannerState } from "@/lib/dashboard/bannerState";
 import { listTasks } from "@/lib/tasks/tasks";
 import { getOrGeneratePlanForDate } from "@/lib/plan/planService";
+import { getPlanDayStatus } from "@/lib/plan/planDayStatus";
 import { SignOutButton } from "./SignOutButton";
 
 export default async function DashboardPage() {
@@ -21,9 +22,10 @@ export default async function DashboardPage() {
 
   const tasks = await listTasks();
   const openTaskCount = tasks.filter((t) => t.status === "open").length;
-  const { entries: planEntries } = await getOrGeneratePlanForDate();
+  const { entries: planEntries, capacityMinutes: planCapacityMinutes } = await getOrGeneratePlanForDate();
   const planEntryCount = planEntries.length;
   const planDoneCount = (planEntries as { checkInStatus: string }[]).filter((e) => e.checkInStatus === "done").length;
+  const planDayStatus = getPlanDayStatus(planEntryCount, planCapacityMinutes);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
@@ -54,8 +56,10 @@ export default async function DashboardPage() {
       <section className="mb-4 rounded-xl bg-white p-6 shadow-sm">
         <h2 className="mb-2 text-lg font-medium text-lavender-dark">Today&apos;s plan</h2>
         <p className="text-slate-600">
-          {planEntryCount === 0
+          {planDayStatus === "no-availability"
             ? "No study time set for today — check your availability in your profile."
+            : planDayStatus === "caught-up"
+            ? "No tasks or study blocks for today — you're all caught up."
             : `${planDoneCount} of ${planEntryCount} items done.`}
         </p>
         <Link href="/plan" className="mt-2 inline-block text-sm text-lavender-dark underline">
