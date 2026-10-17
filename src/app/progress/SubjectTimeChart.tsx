@@ -6,7 +6,7 @@ interface SubjectTimePoint {
 }
 
 export function SubjectTimeChart({ data }: { data: SubjectTimePoint[] }) {
-  const maxMinutes = Math.max(...data.map((d) => d.plannedMinutes), 1);
+  const maxMinutes = Math.max(...data.flatMap((d) => [d.plannedMinutes, d.actualMinutes]), 1);
   const barWidth = 18;
   const gap = 6;
   const groupGap = 20;
@@ -42,6 +42,15 @@ export function SubjectTimeChart({ data }: { data: SubjectTimePoint[] }) {
                   {point.subjectName} planned: {point.plannedMinutes} min
                 </title>
               </rect>
+              <text
+                x={groupX + barWidth / 2}
+                y={Math.max(chartHeight - plannedHeight - 4, 10)}
+                textAnchor="middle"
+                fontSize={9}
+                fill="#52514e"
+              >
+                {point.plannedMinutes}
+              </text>
               <rect
                 x={groupX + barWidth + gap}
                 y={chartHeight - actualHeight}
@@ -54,6 +63,15 @@ export function SubjectTimeChart({ data }: { data: SubjectTimePoint[] }) {
                   {point.subjectName} actual: {point.actualMinutes} min
                 </title>
               </rect>
+              <text
+                x={groupX + barWidth + gap + barWidth / 2}
+                y={Math.max(chartHeight - actualHeight - 4, 10)}
+                textAnchor="middle"
+                fontSize={9}
+                fill="#52514e"
+              >
+                {point.actualMinutes}
+              </text>
               <text x={groupX + groupWidth / 2} y={chartHeight + 16} textAnchor="middle" fontSize={10} fill="#52514e">
                 {point.subjectName}
               </text>

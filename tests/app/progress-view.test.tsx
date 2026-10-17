@@ -25,6 +25,28 @@ describe("ProgressView", () => {
     expect(screen.getByText(/3/)).toBeInTheDocument();
   });
 
+  it("keeps bars within the chart's visible bounds and shows a numeric label on every bar, even when actual exceeds planned", () => {
+    const overAchieved = {
+      completion: [],
+      subjectTime: [{ subjectId: "s1", subjectName: "Math", plannedMinutes: 30, actualMinutes: 90 }],
+      hasActivity: true,
+    };
+    const { container } = render(<ProgressView initialWindow="week" initialData={overAchieved} streak={0} />);
+
+    const rects = Array.from(container.querySelectorAll("svg rect"));
+    expect(rects.length).toBeGreaterThan(0);
+    for (const rect of rects) {
+      const y = Number(rect.getAttribute("y"));
+      const height = Number(rect.getAttribute("height"));
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y + height).toBeLessThanOrEqual(140.01);
+    }
+
+    const svgTexts = Array.from(container.querySelectorAll("svg text")).map((t) => t.textContent);
+    expect(svgTexts).toContain("30");
+    expect(svgTexts).toContain("90");
+  });
+
   it("re-fetches data when the Month toggle is clicked", async () => {
     (getProgressData as any).mockResolvedValue(activeData);
     render(<ProgressView initialWindow="week" initialData={emptyData} streak={0} />);
