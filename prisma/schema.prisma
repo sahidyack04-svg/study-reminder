@@ -81,6 +81,7 @@ model StudentProfile {
   goals               Goal[]
   tasks               Task[]
   planEntries         PlanEntry[]
+  journalEntries      JournalEntry[]
   reminderPreference  ReminderPreference?
 }
 
@@ -186,6 +187,19 @@ model PlanEntry {
   task           Task?          @relation(fields: [taskId], references: [id], onDelete: SetNull)
   goal           Goal?          @relation(fields: [goalId], references: [id], onDelete: SetNull)
   subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, date])
+}
+
+model JournalEntry {
+  id               String   @id @default(cuid())
+  studentProfileId String
+  date             DateTime // UTC-midnight-anchored calendar date
+  content          String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 
   @@index([studentProfileId, date])
 }
