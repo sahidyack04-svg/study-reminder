@@ -41,6 +41,7 @@ export async function getProgressData(window: "week" | "month"): Promise<Progres
   const entries = await prisma.planEntry.findMany({
     where: { studentProfileId: profile.id, date: { gte: windowStart } },
     include: { subject: true },
+    orderBy: { date: "asc" },
   });
 
   const completion = computeDailyCompletion(groupByDate(entries));

@@ -7,6 +7,7 @@ import { listTasks } from "@/lib/tasks/tasks";
 import { getOrGeneratePlanForDate } from "@/lib/plan/planService";
 import { getPlanDayStatus } from "@/lib/plan/planDayStatus";
 import { getCurrentStreak } from "@/lib/progress/progressService";
+import { getTodayEntry } from "@/lib/journal/journal";
 import { SignOutButton } from "./SignOutButton";
 
 export default async function DashboardPage() {
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
   const planDoneCount = (planEntries as { checkInStatus: string }[]).filter((e) => e.checkInStatus === "done").length;
   const planDayStatus = getPlanDayStatus(planEntryCount, planCapacityMinutes);
   const streak = await getCurrentStreak();
+  const todayJournalEntry = await getTodayEntry();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
@@ -74,6 +76,16 @@ export default async function DashboardPage() {
         <p className="text-slate-600">{openTaskCount} open task{openTaskCount === 1 ? "" : "s"}.</p>
         <Link href="/tasks" className="mt-2 inline-block text-sm text-lavender-dark underline">
           Manage tasks
+        </Link>
+      </section>
+
+      <section className="mb-4 rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="mb-2 text-lg font-medium text-lavender-dark">Journal</h2>
+        <p className="text-slate-600">
+          {todayJournalEntry ? "You've written in your journal today." : "You haven't written in your journal today yet."}
+        </p>
+        <Link href="/journal" className="mt-2 inline-block text-sm text-lavender-dark underline">
+          {todayJournalEntry ? "View or edit today's entry" : "Write today's entry"}
         </Link>
       </section>
 

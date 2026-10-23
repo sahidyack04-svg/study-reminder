@@ -73,6 +73,32 @@ describe("getProgressData", () => {
     expect(result.hasActivity).toBe(true);
     expect(result.subjectTime).toEqual([{ subjectId: "s1", subjectName: "Math", plannedMinutes: 30, actualMinutes: 30 }]);
   });
+
+  it("scopes the plan-entry query to the signed-in student's own profile, not any id the caller might supply", async () => {
+    const otherSessionUser = { id: "u2", email: "other@example.test", emailVerified: new Date() };
+    const otherProfile = { id: "p2", userId: "u2", timezone: "UTC" };
+    (getCurrentSessionUser as any).mockResolvedValue(otherSessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(otherProfile);
+    (prisma.planEntry.findMany as any).mockResolvedValue([]);
+
+    await getProgressData("week");
+
+    expect(prisma.studentProfile.findUnique).toHaveBeenCalledWith({ where: { userId: "u2" } });
+    const call = (prisma.planEntry.findMany as any).mock.calls[0][0];
+    expect(call.where.studentProfileId).toBe("p2");
+    expect(call.where.studentProfileId).not.toBe("p1");
+  });
+
+  it("orders plan entries chronologically, so the completion chart's day order does not depend on incidental row order", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.planEntry.findMany as any).mockResolvedValue([]);
+
+    await getProgressData("week");
+
+    const call = (prisma.planEntry.findMany as any).mock.calls[0][0];
+    expect(call.orderBy).toEqual({ date: "asc" });
+  });
 });
 
 describe("getCurrentStreak", () => {
@@ -115,5 +141,19 @@ describe("getCurrentStreak", () => {
     ]);
 
     expect(await getCurrentStreak()).toBe(0);
+  });
+
+  it("scopes the streak lookback query to the signed-in student's own profile, not any id the caller might supply", async () => {
+    const otherSessionUser = { id: "u2", email: "other@example.test", emailVerified: new Date() };
+    const otherProfile = { id: "p2", userId: "u2", timezone: "UTC" };
+    (getCurrentSessionUser as any).mockResolvedValue(otherSessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(otherProfile);
+    (prisma.planEntry.findMany as any).mockResolvedValue([]);
+
+    await getCurrentStreak();
+
+    const call = (prisma.planEntry.findMany as any).mock.calls[0][0];
+    expect(call.where.studentProfileId).toBe("p2");
+    expect(call.where.studentProfileId).not.toBe("p1");
   });
 });

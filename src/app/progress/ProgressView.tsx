@@ -56,11 +56,19 @@ export function ProgressView({
         <>
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-medium text-lavender-dark">Daily completion</h2>
-            <CompletionChart data={data.completion} />
+            {data.completion.length > 0 ? (
+              <CompletionChart data={data.completion} />
+            ) : (
+              <p className="text-sm text-slate-500">No study activity yet in this period.</p>
+            )}
           </div>
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-medium text-lavender-dark">Time by subject</h2>
-            <SubjectTimeChart data={data.subjectTime} />
+            {data.subjectTime.length > 0 ? (
+              <SubjectTimeChart data={data.subjectTime} />
+            ) : (
+              <p className="text-sm text-slate-500">No subject-tagged study time yet in this period.</p>
+            )}
           </div>
         </>
       )}

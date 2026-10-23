@@ -76,6 +76,15 @@ describe("saveJournalEntry", () => {
     expect(prisma.journalEntry.update).not.toHaveBeenCalled();
   });
 
+  it("rejects saving without a session, without touching the database", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(null);
+    const result = await saveJournalEntry("Studied algebra.");
+    expect(result.success).toBe(false);
+    expect(prisma.journalEntry.findFirst).not.toHaveBeenCalled();
+    expect(prisma.journalEntry.create).not.toHaveBeenCalled();
+    expect(prisma.journalEntry.update).not.toHaveBeenCalled();
+  });
+
   it("creates a new entry for today when none exists yet", async () => {
     (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
     (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
@@ -96,7 +105,25 @@ describe("saveJournalEntry", () => {
     (prisma.journalEntry.update as any).mockResolvedValue({ id: "j1" });
     const result = await saveJournalEntry("new text");
     expect(result.success).toBe(true);
+    expect(prisma.journalEntry.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ studentProfileId: "p1" }) }),
+    );
     expect(prisma.journalEntry.update).toHaveBeenCalledWith({ where: { id: "j1" }, data: { content: "new text" } });
     expect(prisma.journalEntry.create).not.toHaveBeenCalled();
+  });
+
+  it("looks up today's existing entry scoped to the signed-in student's own profile, not any id the caller might supply", async () => {
+    const otherSessionUser = { id: "u2", email: "other@example.test", emailVerified: new Date() };
+    const otherProfile = { id: "p2", userId: "u2", timezone: "UTC" };
+    (getCurrentSessionUser as any).mockResolvedValue(otherSessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(otherProfile);
+    (prisma.journalEntry.findFirst as any).mockResolvedValue(null);
+    (prisma.journalEntry.create as any).mockResolvedValue({ id: "j2" });
+
+    await saveJournalEntry("Studied algebra.");
+
+    const findFirstCall = (prisma.journalEntry.findFirst as any).mock.calls[0][0];
+    expect(findFirstCall.where.studentProfileId).toBe("p2");
+    expect(findFirstCall.where.studentProfileId).not.toBe("p1");
   });
 });

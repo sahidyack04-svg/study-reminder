@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { calculateAge, requiresGuardianConsent, todayInTimezone } from "@/lib/validation/age";
+import { calculateAge, requiresGuardianConsent, todayInTimezone, formatUTCDate } from "@/lib/validation/age";
 
 describe("age calculations", () => {
   it("calculates age correctly before a birthday has passed this year", () => {
@@ -38,5 +38,19 @@ describe("todayInTimezone", () => {
 
     expect(aheadOfUtc.toISOString().slice(0, 10)).toBe("2026-10-15");
     expect(behindUtc.toISOString().slice(0, 10)).toBe("2026-10-14");
+  });
+});
+
+describe("formatUTCDate", () => {
+  it("formats a UTC-midnight-anchored calendar date as the same calendar day, regardless of host timezone", () => {
+    // 2026-01-05T00:00:00.000Z is the calendar date Jan 5 everywhere it's
+    // meant to represent (it's a date-only value, not a real instant).
+    // toLocaleDateString() with no timeZone option would read it back in
+    // the host process's local timezone instead, which can roll it back
+    // to Jan 4 west of UTC -- the exact off-by-one this helper exists to
+    // prevent, independent of whatever TZ this test suite happens to run in.
+    const date = new Date("2026-01-05T00:00:00.000Z");
+    expect(formatUTCDate(date)).toBe(date.toLocaleDateString(undefined, { timeZone: "UTC" }));
+    expect(formatUTCDate(date)).toContain("2026");
   });
 });

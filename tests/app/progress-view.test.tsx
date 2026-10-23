@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ProgressView } from "@/app/progress/ProgressView";
+import { formatUTCDate } from "@/lib/validation/age";
 
 vi.mock("@/lib/progress/progressService", () => ({ getProgressData: vi.fn() }));
 import { getProgressData } from "@/lib/progress/progressService";
@@ -45,6 +46,21 @@ describe("ProgressView", () => {
     const svgTexts = Array.from(container.querySelectorAll("svg text")).map((t) => t.textContent);
     expect(svgTexts).toContain("30");
     expect(svgTexts).toContain("90");
+  });
+
+  it("shows an honest message instead of a blank chart when there's activity but none of it is subject-tagged", () => {
+    const unassignedOnly = {
+      completion: [{ date: new Date("2026-10-17"), percentDone: 50 }],
+      subjectTime: [],
+      hasActivity: true,
+    };
+    render(<ProgressView initialWindow="week" initialData={unassignedOnly} streak={0} />);
+    expect(screen.getByText(/no subject-tagged study time yet/i)).toBeInTheDocument();
+  });
+
+  it("renders the completion chart's dates in UTC, not the host's local timezone", () => {
+    render(<ProgressView initialWindow="week" initialData={activeData} streak={3} />);
+    expect(screen.getByText(formatUTCDate(activeData.completion[0].date))).toBeInTheDocument();
   });
 
   it("re-fetches data when the Month toggle is clicked", async () => {

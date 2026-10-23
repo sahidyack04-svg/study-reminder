@@ -27,3 +27,12 @@ export function todayInTimezone(timezone: string): Date {
   // en-CA locale formats as YYYY-MM-DD
   return new Date(`${parts}T00:00:00.000Z`);
 }
+
+// Renders a UTC-midnight-anchored calendar date (PlanEntry.date,
+// JournalEntry.date, etc.) for display. Plain toLocaleDateString() reads
+// the date back in the HOST process's local timezone, which can roll a
+// UTC-midnight date back a full day for any viewer west of UTC -- use this
+// everywhere a stored calendar date is shown to a user, not the bare method.
+export function formatUTCDate(date: Date): string {
+  return date.toLocaleDateString(undefined, { timeZone: "UTC" });
+}

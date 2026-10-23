@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { JournalView } from "@/app/journal/JournalView";
+import { formatUTCDate } from "@/lib/validation/age";
 
 vi.mock("@/lib/journal/journal", () => ({ saveJournalEntry: vi.fn() }));
 import { saveJournalEntry } from "@/lib/journal/journal";
@@ -41,5 +42,10 @@ describe("JournalView", () => {
   it("pre-fills the textarea when today's entry already exists", () => {
     render(<JournalView todayEntry={{ id: "j1", date: new Date(), content: "Already written today" }} pastEntries={[]} />);
     expect(screen.getByDisplayValue("Already written today")).toBeInTheDocument();
+  });
+
+  it("renders a past entry's date in UTC, not the host's local timezone", () => {
+    render(<JournalView todayEntry={null} pastEntries={pastEntries} />);
+    expect(screen.getByText(formatUTCDate(pastEntries[0].date))).toBeInTheDocument();
   });
 });

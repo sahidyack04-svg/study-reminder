@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveJournalEntry } from "@/lib/journal/journal";
+import { formatUTCDate } from "@/lib/validation/age";
 
 interface JournalEntryView {
   id: string;
@@ -62,7 +63,7 @@ export function JournalView({
           <h2 className="text-lg font-medium text-lavender-dark">Past entries</h2>
           {pastEntries.map((entry) => (
             <div key={entry.id} className="rounded-xl bg-blush p-4">
-              <p className="mb-1 text-xs text-slate-500">{entry.date.toLocaleDateString()}</p>
+              <p className="mb-1 text-xs text-slate-500">{formatUTCDate(entry.date)}</p>
               <p className="whitespace-pre-wrap text-slate-700">{entry.content}</p>
             </div>
           ))}

@@ -1,3 +1,5 @@
+import { formatUTCDate } from "@/lib/validation/age";
+
 interface CompletionPoint {
   date: Date;
   percentDone: number;
@@ -28,7 +30,7 @@ export function CompletionChart({ data }: { data: CompletionPoint[] }) {
                 fillOpacity={opacity}
               >
                 <title>
-                  {point.date.toLocaleDateString()}: {point.percentDone}% done
+                  {formatUTCDate(point.date)}: {point.percentDone}% done
                 </title>
               </rect>
               <text x={x + barWidth / 2} y={chartHeight + 16} textAnchor="middle" fontSize={10} fill="#52514e">
@@ -49,7 +51,7 @@ export function CompletionChart({ data }: { data: CompletionPoint[] }) {
         <tbody>
           {data.map((point) => (
             <tr key={point.date.toISOString()}>
-              <td>{point.date.toLocaleDateString()}</td>
+              <td>{formatUTCDate(point.date)}</td>
               <td>{point.percentDone}%</td>
             </tr>
           ))}
