@@ -5,15 +5,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: "#FFF9F4",
-        blush: "#FBE4EC",
-        pink: {
-          DEFAULT: "#F3A7C5",
-          dark: "#D97BA3",
+        brand: {
+          DEFAULT: "#0E6E55",
+          dark: "#0A5443",
+          light: "#E6F3EF",
         },
-        lavender: {
-          DEFAULT: "#CDBFEF",
-          dark: "#A693D6",
+        ink: {
+          DEFAULT: "#1F2937",
+          muted: "#64748B",
+        },
+        surface: {
+          DEFAULT: "#FFFFFF",
+          page: "#F7F8FA",
+        },
+        border: {
+          DEFAULT: "#E2E8F0",
+        },
+        success: {
+          DEFAULT: "#15803D",
+          light: "#DCFCE7",
+        },
+        warning: {
+          DEFAULT: "#B45309",
+          light: "#FEF3C7",
+        },
+        danger: {
+          DEFAULT: "#DC2626",
+          light: "#FEE2E2",
         },
       },
       fontFamily: {

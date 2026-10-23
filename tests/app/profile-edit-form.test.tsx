@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ProfileEditForm } from "@/app/profile/ProfileEditForm";
+import { ProfileEditForm } from "@/app/(app)/profile/ProfileEditForm";
 
 vi.mock("@/lib/onboarding/updateProfile", () => ({ updateStudentProfile: vi.fn() }));
 vi.mock("@/lib/onboarding/guardianConsentActions", () => ({

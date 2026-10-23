@@ -40,10 +40,10 @@ function VerifyEmailContent() {
   if (!token) {
     if (sent) {
       return (
-        <p className="text-slate-600">
+        <p className="text-ink-muted">
           If an account exists for <strong>{email}</strong> and isn&apos;t verified yet, we&apos;ve sent a
           new link. (Testing locally without an email provider configured? Check the{" "}
-          <Link href="/dev/emails" className="text-lavender-dark underline">
+          <Link href="/dev/emails" className="text-brand underline">
             local dev inbox
           </Link>
           .)
@@ -53,25 +53,25 @@ function VerifyEmailContent() {
 
     return (
       <>
-        <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Verify your email</h1>
-        <p className="mb-6 text-slate-600">
+        <h1 className="mb-4 text-2xl font-semibold text-brand">Verify your email</h1>
+        <p className="mb-6 text-ink-muted">
           Check your email for a verification link to activate your account. Link expired or never
           arrived? Enter your email and we&apos;ll send a new one.
         </p>
         <form onSubmit={handleResend} className="flex flex-col gap-4 text-left">
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-slate-700">Email</span>
+            <span className="text-sm font-medium text-ink">Email</span>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-lg border border-lavender px-4 py-2"
+              className="rounded-lg border border-border px-4 py-2"
             />
           </label>
           <button
             type="submit"
-            className="mt-2 rounded-full bg-pink px-6 py-3 font-medium text-white hover:bg-pink-dark"
+            className="mt-2 rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark"
           >
             Resend verification email
           </button>
@@ -83,8 +83,8 @@ function VerifyEmailContent() {
   if (status === "success") {
     return (
       <>
-        <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Email verified!</h1>
-        <Link href="/login" className="text-lavender-dark underline">
+        <h1 className="mb-4 text-2xl font-semibold text-brand">Email verified!</h1>
+        <Link href="/login" className="text-brand underline">
           Log in to continue
         </Link>
       </>
@@ -94,21 +94,21 @@ function VerifyEmailContent() {
   if (status === "error") {
     return (
       <>
-        <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Verification failed</h1>
-        <p className="text-slate-600">{error}</p>
+        <h1 className="mb-4 text-2xl font-semibold text-brand">Verification failed</h1>
+        <p className="text-ink-muted">{error}</p>
       </>
     );
   }
 
   return (
     <>
-      <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Verify your email</h1>
-      <p className="mb-6 text-slate-600">Click below to confirm your email address and activate your account.</p>
+      <h1 className="mb-4 text-2xl font-semibold text-brand">Verify your email</h1>
+      <p className="mb-6 text-ink-muted">Click below to confirm your email address and activate your account.</p>
       <button
         type="button"
         onClick={handleVerify}
         disabled={status === "verifying"}
-        className="rounded-full bg-pink px-6 py-3 font-medium text-white hover:bg-pink-dark disabled:opacity-60"
+        className="rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
       >
         {status === "verifying" ? "Verifying..." : "Verify my email"}
       </button>
@@ -118,10 +118,12 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <main className="mx-auto max-w-md px-6 py-24 text-center">
-      <Suspense fallback={<p className="text-slate-600">Loading...</p>}>
-        <VerifyEmailContent />
-      </Suspense>
+    <main className="flex min-h-screen items-center justify-center bg-surface-page px-4 py-16">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 text-center shadow-sm">
+        <Suspense fallback={<p className="text-ink-muted">Loading...</p>}>
+          <VerifyEmailContent />
+        </Suspense>
+      </div>
     </main>
   );
 }

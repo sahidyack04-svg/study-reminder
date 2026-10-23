@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { listTasks } from "@/lib/tasks/tasks";
@@ -18,12 +17,10 @@ export default async function TasksPage() {
   const tasks = await listTasks();
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <Link href="/dashboard" className="mb-4 inline-block text-sm text-lavender-dark underline">
-        ← Back to dashboard
-      </Link>
-      <h1 className="mb-8 text-2xl font-semibold text-pink-dark">Your tasks</h1>
+    <div>
+      <h1 className="mb-1 text-2xl font-semibold text-ink">Tasks &amp; homework</h1>
+      <p className="mb-8 text-sm text-ink-muted">Keep on top of what's due and mark work off as you finish it.</p>
       <TaskList initialTasks={tasks} subjects={profile.subjects} />
-    </main>
+    </div>
   );
 }

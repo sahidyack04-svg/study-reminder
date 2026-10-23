@@ -14,8 +14,9 @@ export default async function ProfilePage() {
   if (!profile) redirect("/onboarding");
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="mb-8 text-2xl font-semibold text-pink-dark">Your profile</h1>
+    <div>
+      <h1 className="mb-1 text-2xl font-semibold text-ink">Account</h1>
+      <p className="mb-8 text-sm text-ink-muted">Your profile, availability, and guardian details.</p>
       <ProfileEditForm
         initial={{
           name: profile.name,
@@ -34,6 +35,6 @@ export default async function ProfilePage() {
             : null
         }
       />
-    </main>
+    </div>
   );
 }

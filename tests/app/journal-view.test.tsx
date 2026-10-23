@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { JournalView } from "@/app/journal/JournalView";
+import { JournalView } from "@/app/(app)/journal/JournalView";
 import { formatUTCDate } from "@/lib/validation/age";
 
 vi.mock("@/lib/journal/journal", () => ({ saveJournalEntry: vi.fn() }));

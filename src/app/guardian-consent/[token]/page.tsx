@@ -18,33 +18,37 @@ export default function GuardianConsentPage() {
 
   if (result) {
     return (
-      <main className="mx-auto max-w-md px-6 py-24 text-center">
-        {result.success ? (
-          <p className="text-slate-600">
-            {result.alreadyApproved
-              ? "This account was already approved. Thank you!"
-              : "Thank you — you've approved this student's account."}
-          </p>
-        ) : (
-          <p className="text-red-600">{result.error}</p>
-        )}
+      <main className="flex min-h-screen items-center justify-center bg-surface-page px-4 py-16 text-center">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 shadow-sm">
+          {result.success ? (
+            <p className="text-ink-muted">
+              {result.alreadyApproved
+                ? "This account was already approved. Thank you!"
+                : "Thank you — you've approved this student's account."}
+            </p>
+          ) : (
+            <p className="text-danger">{result.error}</p>
+          )}
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-24 text-center">
-      <h1 className="mb-4 text-2xl font-semibold text-pink-dark">Guardian approval requested</h1>
-      <p className="mb-8 text-slate-600">
-        A student has listed you as their guardian on Study Reminder and needs your consent to use the app.
-      </p>
-      <button
-        onClick={handleApprove}
-        disabled={submitting}
-        className="rounded-full bg-pink px-6 py-3 font-medium text-white hover:bg-pink-dark disabled:opacity-60"
-      >
-        {submitting ? "Submitting..." : "Yes, I approve"}
-      </button>
+    <main className="flex min-h-screen items-center justify-center bg-surface-page px-4 py-16 text-center">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 shadow-sm">
+        <h1 className="mb-4 text-2xl font-semibold text-ink">Guardian approval requested</h1>
+        <p className="mb-8 text-ink-muted">
+          A student has listed you as their guardian on Study Reminder and needs your consent to use the app.
+        </p>
+        <button
+          onClick={handleApprove}
+          disabled={submitting}
+          className="rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          {submitting ? "Submitting..." : "Yes, I approve"}
+        </button>
+      </div>
     </main>
   );
 }

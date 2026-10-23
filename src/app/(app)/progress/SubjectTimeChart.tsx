@@ -15,7 +15,7 @@ export function SubjectTimeChart({ data }: { data: SubjectTimePoint[] }) {
 
   return (
     <div>
-      <div className="mb-2 flex gap-4 text-xs text-slate-600">
+      <div className="mb-2 flex gap-4 text-xs text-ink-muted">
         <span className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "#4a3aa7" }} />
           Planned

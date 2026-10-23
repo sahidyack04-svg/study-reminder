@@ -31,7 +31,7 @@ export function PlanView({ entries: initial, capacityMinutes }: { entries: PlanE
 
   if (planDayStatus === "no-availability") {
     return (
-      <p className="rounded-xl bg-blush p-4 text-sm text-slate-700">
+      <p className="rounded-xl bg-brand-light p-4 text-sm text-ink">
         No study time set for today. Add your weekly availability in{" "}
         <Link href="/profile" className="underline">your profile</Link> to get a personalized plan.
       </p>
@@ -39,7 +39,7 @@ export function PlanView({ entries: initial, capacityMinutes }: { entries: PlanE
   }
 
   if (planDayStatus === "caught-up") {
-    return <p className="text-slate-500">No tasks or study blocks for today — you&apos;re all caught up.</p>;
+    return <p className="text-ink-muted">No tasks or study blocks for today — you&apos;re all caught up.</p>;
   }
 
   return (
@@ -51,28 +51,28 @@ export function PlanView({ entries: initial, capacityMinutes }: { entries: PlanE
             <div className="flex items-center justify-between">
               <div>
                 <p className={entry.checkInStatus === "done" ? "text-slate-400 line-through" : ""}>{entry.title}</p>
-                <p className="text-xs text-slate-500">{entry.estimatedMinutes} min</p>
-                {entry.carriedOverFromDate && <p className="text-xs text-lavender-dark">Carried over from yesterday</p>}
+                <p className="text-xs text-ink-muted">{entry.estimatedMinutes} min</p>
+                {entry.carriedOverFromDate && <p className="text-xs text-brand">Carried over from yesterday</p>}
               </div>
               <div className="flex gap-1">
                 <button
                   onClick={() => handleCheckIn(entry.id, "done")}
                   aria-label={`Mark ${entry.title} done`}
-                  className="rounded-full bg-lavender px-3 py-1 text-xs text-white"
+                  className="rounded-full bg-ink-muted px-3 py-1 text-xs text-white"
                 >
                   Done
                 </button>
                 <button
                   onClick={() => handleCheckIn(entry.id, "partial")}
                   aria-label={`Mark ${entry.title} partial`}
-                  className="rounded-full border border-lavender px-3 py-1 text-xs text-lavender-dark"
+                  className="rounded-full border border-border px-3 py-1 text-xs text-brand"
                 >
                   Partial
                 </button>
                 <button
                   onClick={() => handleCheckIn(entry.id, "not_done")}
                   aria-label={`Mark ${entry.title} not done`}
-                  className="rounded-full border border-lavender px-3 py-1 text-xs text-lavender-dark"
+                  className="rounded-full border border-border px-3 py-1 text-xs text-brand"
                 >
                   Not done
                 </button>

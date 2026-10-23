@@ -98,12 +98,12 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
         <select
           value={subjectId}
           onChange={(e) => setSubjectId(e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         >
           <option value="">No subject</option>
           {subjects.map((s) => (
@@ -116,20 +116,20 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
-        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <label className="flex flex-col gap-1 text-sm font-medium text-ink">
           Estimated minutes
           <input
             type="number"
             min={1}
             value={estimatedMinutes}
             onChange={(e) => setEstimatedMinutes(Number(e.target.value))}
-            className="rounded-lg border border-lavender px-4 py-2"
+            className="rounded-lg border border-border px-4 py-2"
           />
         </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button type="submit" className="self-start rounded-full bg-pink px-6 py-2 font-medium text-white hover:bg-pink-dark">
+        <button type="submit" className="self-start rounded-full bg-brand px-6 py-2 font-medium text-white hover:bg-brand-dark">
           Add task
         </button>
       </form>
@@ -141,28 +141,28 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
               <input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="rounded-lg border border-lavender px-4 py-2"
+                className="rounded-lg border border-border px-4 py-2"
               />
-              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+              <label className="flex flex-col gap-1 text-sm font-medium text-ink">
                 Estimated minutes
                 <input
                   type="number"
                   min={1}
                   value={editEstimatedMinutes}
                   onChange={(e) => setEditEstimatedMinutes(Number(e.target.value))}
-                  className="rounded-lg border border-lavender px-4 py-2"
+                  className="rounded-lg border border-border px-4 py-2"
                 />
               </label>
               <div className="flex gap-2">
                 <button
                   onClick={() => saveEdit(task.id)}
-                  className="rounded-full bg-pink px-4 py-1 text-sm font-medium text-white"
+                  className="rounded-full bg-brand px-4 py-1 text-sm font-medium text-white"
                 >
                   Save changes
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="rounded-full border border-lavender px-4 py-1 text-sm text-lavender-dark"
+                  className="rounded-full border border-border px-4 py-1 text-sm text-brand"
                 >
                   Cancel
                 </button>
@@ -176,7 +176,7 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
                   <button
                     onClick={() => handleDone(task.id)}
                     aria-label={`Mark ${task.title} done`}
-                    className="rounded-full bg-lavender px-3 py-1 text-sm text-white"
+                    className="rounded-full bg-ink-muted px-3 py-1 text-sm text-white"
                   >
                     Done
                   </button>
@@ -184,14 +184,14 @@ export function TaskList({ initialTasks, subjects }: { initialTasks: TaskView[];
                 <button
                   onClick={() => startEdit(task)}
                   aria-label={`Edit ${task.title}`}
-                  className="rounded-full border border-lavender px-3 py-1 text-sm text-lavender-dark"
+                  className="rounded-full border border-border px-3 py-1 text-sm text-brand"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(task.id)}
                   aria-label={`Delete ${task.title}`}
-                  className="rounded-full border border-lavender px-3 py-1 text-sm text-lavender-dark"
+                  className="rounded-full border border-border px-3 py-1 text-sm text-brand"
                 >
                   Delete
                 </button>

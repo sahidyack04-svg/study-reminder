@@ -60,87 +60,87 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm">
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">Name</span>
+        <span className="text-sm font-medium text-ink">Name</span>
         <input
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">Date of birth</span>
+        <span className="text-sm font-medium text-ink">Date of birth</span>
         <input
           type="date"
           value={form.dateOfBirth}
           onChange={(e) => update("dateOfBirth", e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">Grade</span>
+        <span className="text-sm font-medium text-ink">Grade</span>
         <input
           value={form.grade}
           onChange={(e) => update("grade", e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">School</span>
+        <span className="text-sm font-medium text-ink">School</span>
         <input
           value={form.schoolName}
           onChange={(e) => update("schoolName", e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">Curriculum</span>
+        <span className="text-sm font-medium text-ink">Curriculum</span>
         <input
           value={form.curriculum}
           onChange={(e) => update("curriculum", e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-700">Academic year</span>
+        <span className="text-sm font-medium text-ink">Academic year</span>
         <input
           value={form.academicYear}
           onChange={(e) => update("academicYear", e.target.value)}
-          className="rounded-lg border border-lavender px-4 py-2"
+          className="rounded-lg border border-border px-4 py-2"
         />
       </label>
 
       {showGuardianFields && (
-        <div className="rounded-lg bg-blush p-4">
+        <div className="rounded-lg bg-brand-light p-4">
           {guardianStatus ? (
-            <p className="mb-2 text-sm text-slate-600">
+            <p className="mb-2 text-sm text-ink-muted">
               Guardian: {guardianStatus.email} — {guardianStatus.approved ? "approved" : "pending approval"}
             </p>
           ) : (
-            <p className="mb-2 text-sm text-slate-600">
+            <p className="mb-2 text-sm text-ink-muted">
               Since you may be under 18, we need a guardian&apos;s name and email to approve your account.
             </p>
           )}
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-ink">
               {guardianStatus ? "Update guardian name" : "Guardian name"}
             </span>
             <input
               value={form.guardian?.name ?? ""}
               onChange={(e) => update("guardian", { name: e.target.value, email: form.guardian?.email ?? "" })}
-              className="rounded-lg border border-lavender px-4 py-2"
+              className="rounded-lg border border-border px-4 py-2"
             />
           </label>
           <label className="mt-2 flex flex-col gap-1">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-ink">
               {guardianStatus ? "Update guardian email" : "Guardian email"}
             </span>
             <input
               value={form.guardian?.email ?? ""}
               onChange={(e) => update("guardian", { name: form.guardian?.name ?? "", email: e.target.value })}
-              className="rounded-lg border border-lavender px-4 py-2"
+              className="rounded-lg border border-border px-4 py-2"
             />
           </label>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-ink-muted">
             {guardianStatus
               ? "Changing the guardian's name or email will re-send a consent request."
               : "Saving will send your guardian a consent request."}
@@ -151,7 +151,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
                 type="button"
                 onClick={handleResendConsent}
                 disabled={resendStatus === "sending"}
-                className="rounded-full border border-lavender px-4 py-2 text-sm text-lavender-dark disabled:opacity-60"
+                className="rounded-full border border-border px-4 py-2 text-sm text-brand disabled:opacity-60"
               >
                 {resendStatus === "sending" ? "Sending..." : "Resend consent email"}
               </button>
@@ -172,7 +172,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
       <button
         type="submit"
         disabled={status === "saving"}
-        className="self-start rounded-full bg-pink px-6 py-3 font-medium text-white hover:bg-pink-dark disabled:opacity-60"
+        className="self-start rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
       >
         {status === "saving" ? "Saving..." : "Save changes"}
       </button>

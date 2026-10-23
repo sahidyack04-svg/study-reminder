@@ -36,7 +36,7 @@ export function JournalView({
   return (
     <div className="flex flex-col gap-8">
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="mb-2 text-lg font-medium text-lavender-dark">Today</h2>
+        <h2 className="mb-2 text-lg font-medium text-brand">Today</h2>
         <textarea
           placeholder="How was today? What did you study, how did it go?"
           value={content}
@@ -45,14 +45,14 @@ export function JournalView({
             setStatus("idle");
           }}
           rows={6}
-          className="w-full rounded-lg border border-lavender px-4 py-2"
+          className="w-full rounded-lg border border-border px-4 py-2"
         />
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         {status === "saved" && <p className="mt-2 text-sm text-green-700">Saved.</p>}
         <button
           onClick={handleSave}
           disabled={status === "saving"}
-          className="mt-3 rounded-full bg-pink px-6 py-2 font-medium text-white hover:bg-pink-dark disabled:opacity-60"
+          className="mt-3 rounded-full bg-brand px-6 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
         >
           {status === "saving" ? "Saving..." : "Save"}
         </button>
@@ -60,11 +60,11 @@ export function JournalView({
 
       {pastEntries.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium text-lavender-dark">Past entries</h2>
+          <h2 className="text-lg font-medium text-brand">Past entries</h2>
           {pastEntries.map((entry) => (
-            <div key={entry.id} className="rounded-xl bg-blush p-4">
-              <p className="mb-1 text-xs text-slate-500">{formatUTCDate(entry.date)}</p>
-              <p className="whitespace-pre-wrap text-slate-700">{entry.content}</p>
+            <div key={entry.id} className="rounded-xl bg-brand-light p-4">
+              <p className="mb-1 text-xs text-ink-muted">{formatUTCDate(entry.date)}</p>
+              <p className="whitespace-pre-wrap text-ink">{entry.content}</p>
             </div>
           ))}
         </div>

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { getOrGeneratePlanForDate } from "@/lib/plan/planService";
@@ -15,12 +14,10 @@ export default async function PlanPage() {
   const { entries, capacityMinutes } = await getOrGeneratePlanForDate();
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <Link href="/dashboard" className="mb-4 inline-block text-sm text-lavender-dark underline">
-        ← Back to dashboard
-      </Link>
-      <h1 className="mb-8 text-2xl font-semibold text-pink-dark">Today&apos;s plan</h1>
+    <div>
+      <h1 className="mb-1 text-2xl font-semibold text-ink">Today&apos;s plan</h1>
+      <p className="mb-8 text-sm text-ink-muted">Your study blocks for today, generated from your availability and open work.</p>
       <PlanView entries={entries as any} capacityMinutes={capacityMinutes} />
-    </main>
+    </div>
   );
 }

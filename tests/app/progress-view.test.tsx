@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ProgressView } from "@/app/progress/ProgressView";
+import { ProgressView } from "@/app/(app)/progress/ProgressView";
 import { formatUTCDate } from "@/lib/validation/age";
 
 vi.mock("@/lib/progress/progressService", () => ({ getProgressData: vi.fn() }));

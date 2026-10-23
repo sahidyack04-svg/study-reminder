@@ -29,41 +29,51 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-24">
-      <h1 className="mb-8 text-2xl font-semibold text-pink-dark">Log in</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-slate-700">Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded-lg border border-lavender px-4 py-2"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-slate-700">Password</span>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg border border-lavender px-4 py-2"
-          />
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="mt-2 rounded-full bg-pink px-6 py-3 font-medium text-white hover:bg-pink-dark disabled:opacity-60"
-        >
-          {submitting ? "Logging in..." : "Log in"}
-        </button>
-      </form>
-      <p className="mt-6 text-sm text-slate-500">
-        <Link href="/forgot-password" className="text-lavender-dark underline">Forgot your password?</Link>
-      </p>
+    <main className="flex min-h-screen items-center justify-center bg-surface-page px-4 py-16">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 shadow-sm">
+        <Link href="/" className="mb-6 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-xs font-bold text-white">SR</span>
+          <span className="text-sm font-semibold text-ink">Study Reminder</span>
+        </Link>
+        <h1 className="mb-1 text-2xl font-semibold text-ink">Sign in</h1>
+        <p className="mb-6 text-sm text-ink-muted">Welcome back. Enter your details to continue.</p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-ink">Email</span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-lg border border-border px-4 py-2 transition focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-ink">Password</span>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="rounded-lg border border-border px-4 py-2 transition focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="mt-2 w-full rounded-full bg-brand px-6 py-3 font-medium text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
+        <p className="mt-6 text-sm text-ink-muted">
+          <Link href="/forgot-password" className="font-medium text-brand underline">Forgot your password?</Link>
+        </p>
+        <p className="mt-2 text-sm text-ink-muted">
+          Don&apos;t have an account? <Link href="/signup" className="font-medium text-brand underline">Create one</Link>
+        </p>
+      </div>
     </main>
   );
 }

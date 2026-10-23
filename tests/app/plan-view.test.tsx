@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { PlanView } from "@/app/plan/PlanView";
+import { PlanView } from "@/app/(app)/plan/PlanView";
 
 vi.mock("@/lib/plan/planService", () => ({ checkInPlanEntry: vi.fn() }));
 import { checkInPlanEntry } from "@/lib/plan/planService";
