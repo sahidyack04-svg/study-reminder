@@ -82,6 +82,8 @@ model StudentProfile {
   tasks               Task[]
   planEntries         PlanEntry[]
   journalEntries      JournalEntry[]
+  questions           Question[]
+  tests               Test[]
   reminderPreference  ReminderPreference?
 }
 
@@ -108,6 +110,62 @@ model Subject {
   goals            Goal[]
   tasks            Task[]
   planEntries      PlanEntry[]
+  questions        Question[]
+  tests            Test[]
+}
+
+model Question {
+  id               String   @id @default(cuid())
+  studentProfileId String
+  subjectId        String
+  topic            String
+  type             String // "mcq" | "short_answer"
+  prompt           String
+  options          String // JSON-encoded string[] -- only meaningful for "mcq"
+  correctAnswer    String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  subject        Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  testAnswers    TestAnswer[]
+
+  @@index([studentProfileId, subjectId])
+}
+
+model Test {
+  id               String    @id @default(cuid())
+  studentProfileId String
+  subjectId        String
+  status           String    @default("in_progress") // "in_progress" | "completed"
+  scorePercent     Int?
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  subject        Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  answers        TestAnswer[]
+
+  @@index([studentProfileId, createdAt])
+}
+
+model TestAnswer {
+  id                    String   @id @default(cuid())
+  testId                String
+  questionId            String?
+  order                 Int
+  promptSnapshot        String
+  optionsSnapshot       String // JSON-encoded string[]
+  correctAnswerSnapshot String
+  topicSnapshot         String
+  typeSnapshot          String // "mcq" | "short_answer"
+  answerGiven           String?
+  isCorrect             Boolean?
+
+  test     Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@index([testId])
 }
 
 model TimetableEntry {
