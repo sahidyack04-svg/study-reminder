@@ -9,3 +9,8 @@ prisma/dev.db-journal
 
 .vercel
 .env*
+
+# Local agent/harness tooling config, not part of the application
+.agents
+.claude
+skills-lock.json
