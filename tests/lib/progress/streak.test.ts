@@ -41,3 +41,32 @@ describe("computeStreak", () => {
     expect(computeStreak(days)).toBe(1);
   });
 });
+
+import { computeLongestStreak } from "@/lib/progress/streak";
+
+describe("computeLongestStreak", () => {
+  it("finds the longest run even when it isn't the current (most recent) one", () => {
+    // today-first order: today is a broken day (pending), but days 3-5 back were a 3-day run
+    const days = [
+      { date: new Date("2026-10-24"), entries: [{ checkInStatus: "pending" }] },
+      { date: new Date("2026-10-23"), entries: [{ checkInStatus: "done" }] },
+      { date: new Date("2026-10-22"), entries: [{ checkInStatus: "done" }] },
+      { date: new Date("2026-10-21"), entries: [{ checkInStatus: "done" }] },
+      { date: new Date("2026-10-20"), entries: [{ checkInStatus: "pending" }] },
+    ];
+    expect(computeLongestStreak(days)).toBe(3);
+  });
+
+  it("returns 0 for an empty history", () => {
+    expect(computeLongestStreak([])).toBe(0);
+  });
+
+  it("skips zero-entry days without breaking a run, same as computeStreak", () => {
+    const days = [
+      { date: new Date("2026-10-24"), entries: [{ checkInStatus: "done" }] },
+      { date: new Date("2026-10-23"), entries: [] },
+      { date: new Date("2026-10-22"), entries: [{ checkInStatus: "done" }] },
+    ];
+    expect(computeLongestStreak(days)).toBe(2);
+  });
+});
