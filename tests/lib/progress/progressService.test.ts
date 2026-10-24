@@ -11,7 +11,7 @@ vi.mock("@/lib/auth/session", () => ({ getCurrentSessionUser: vi.fn() }));
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentSessionUser } from "@/lib/auth/session";
 import { todayInTimezone } from "@/lib/validation/age";
-import { getProgressData, getCurrentStreak } from "@/lib/progress/progressService";
+import { getProgressData, getCurrentStreak, getStreakStats } from "@/lib/progress/progressService";
 
 const sessionUser = { id: "u1", email: "s@example.test", emailVerified: new Date() };
 const profile = { id: "p1", userId: "u1", timezone: "UTC" };
@@ -155,5 +155,30 @@ describe("getCurrentStreak", () => {
     const call = (prisma.planEntry.findMany as any).mock.calls[0][0];
     expect(call.where.studentProfileId).toBe("p2");
     expect(call.where.studentProfileId).not.toBe("p1");
+  });
+});
+
+describe("getStreakStats", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns zeroed stats with no session", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(null);
+    expect(await getStreakStats()).toEqual({ current: 0, longest: 0, totalActiveDays: 0 });
+  });
+
+  it("computes current, longest, and totalActiveDays from one 365-day query", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    const today = todayInTimezone(profile.timezone);
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    (prisma.planEntry.findMany as any).mockResolvedValue([
+      { date: today, subjectId: "s1", subject: { name: "Math" }, estimatedMinutes: 30, checkInStatus: "done" },
+      { date: yesterday, subjectId: "s1", subject: { name: "Math" }, estimatedMinutes: 30, checkInStatus: "done" },
+    ]);
+    const stats = await getStreakStats();
+    expect(stats.current).toBe(2);
+    expect(stats.longest).toBe(2);
+    expect(stats.totalActiveDays).toBe(2);
+    expect(prisma.planEntry.findMany).toHaveBeenCalledTimes(1);
   });
 });

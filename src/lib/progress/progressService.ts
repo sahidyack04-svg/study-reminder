@@ -5,7 +5,7 @@ import { getCurrentSessionUser } from "@/lib/auth/session";
 import { todayInTimezone } from "@/lib/validation/age";
 import { computeDailyCompletion, type CompletionPoint, type DayEntries } from "./completionChart";
 import { computeTimeBySubject, type SubjectTimePoint } from "./subjectTimeChart";
-import { computeStreak } from "./streak";
+import { computeStreak, computeLongestStreak } from "./streak";
 
 export interface ProgressData {
   completion: CompletionPoint[];
@@ -57,9 +57,25 @@ export async function getProgressData(window: "week" | "month"): Promise<Progres
   return { completion, subjectTime, hasActivity: entries.length > 0 };
 }
 
-export async function getCurrentStreak(): Promise<number> {
+/**
+ * Shared by getCurrentStreak and getStreakStats: resolves the caller's
+ * profile, runs the single 365-day-lookback PlanEntry query, and groups the
+ * results into DayEntries ordered today-first.
+ *
+ * groupByDate only produces a DayEntries for dates that actually have
+ * PlanEntry rows. If today has zero rows yet (e.g. the daily plan hasn't
+ * been generated), today would be silently absent here, and the most
+ * recent PAST day would wrongly sort to index 0 and be treated as "today"
+ * by computeStreak's lenient pending-day rule. Make sure today is always
+ * present -- with an empty entries array if it genuinely has no rows yet --
+ * so computeStreak's own zero-entries handling (skip, don't break) applies
+ * to today instead.
+ *
+ * Returns null if there is no signed-in student profile.
+ */
+async function getStreakByDate(): Promise<DayEntries[] | null> {
   const profile = await getOwnProfile();
-  if (!profile) return 0;
+  if (!profile) return null;
 
   const today = todayInTimezone(profile.timezone);
   const lookbackStart = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
@@ -70,14 +86,6 @@ export async function getCurrentStreak(): Promise<number> {
 
   const byDate = groupByDate(entries);
 
-  // groupByDate only produces a DayEntries for dates that actually have
-  // PlanEntry rows. If today has zero rows yet (e.g. the daily plan hasn't
-  // been generated), today would be silently absent here, and the most
-  // recent PAST day would wrongly sort to index 0 and be treated as "today"
-  // by computeStreak's lenient pending-day rule. Make sure today is always
-  // present -- with an empty entries array if it genuinely has no rows yet --
-  // so computeStreak's own zero-entries handling (skip, don't break) applies
-  // to today instead.
   const todayKey = today.toISOString();
   if (!byDate.some((day) => day.date.toISOString() === todayKey)) {
     byDate.push({ date: today, entries: [] });
@@ -85,5 +93,35 @@ export async function getCurrentStreak(): Promise<number> {
 
   byDate.sort((a, b) => b.date.getTime() - a.date.getTime()); // today first
 
+  return byDate;
+}
+
+export async function getCurrentStreak(): Promise<number> {
+  const byDate = await getStreakByDate();
+  if (!byDate) return 0;
   return computeStreak(byDate);
+}
+
+export interface StreakStats {
+  current: number;
+  longest: number;
+  totalActiveDays: number;
+}
+
+export async function getStreakStats(): Promise<StreakStats> {
+  const byDate = await getStreakByDate();
+  if (!byDate) return { current: 0, longest: 0, totalActiveDays: 0 };
+
+  // Same "counts as a streak day" predicate computeStreak/computeLongestStreak
+  // use internally: the day has at least one entry, and every entry in it is
+  // non-pending.
+  const totalActiveDays = byDate.filter(
+    (day) => day.entries.length > 0 && day.entries.every((e) => e.checkInStatus !== "pending"),
+  ).length;
+
+  return {
+    current: computeStreak(byDate),
+    longest: computeLongestStreak(byDate),
+    totalActiveDays,
+  };
 }
