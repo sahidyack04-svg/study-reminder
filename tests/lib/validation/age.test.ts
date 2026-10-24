@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { calculateAge, requiresGuardianConsent, todayInTimezone, formatUTCDate } from "@/lib/validation/age";
+import {
+  calculateAge,
+  requiresGuardianConsent,
+  todayInTimezone,
+  currentTimeInTimezone,
+  formatUTCDate,
+} from "@/lib/validation/age";
 
 describe("age calculations", () => {
   it("calculates age correctly before a birthday has passed this year", () => {
@@ -38,6 +44,22 @@ describe("todayInTimezone", () => {
 
     expect(aheadOfUtc.toISOString().slice(0, 10)).toBe("2026-10-15");
     expect(behindUtc.toISOString().slice(0, 10)).toBe("2026-10-14");
+  });
+});
+
+describe("currentTimeInTimezone", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("formats the current time in the given timezone as a 24-hour HH:mm string", () => {
+    // Same pinned instant as the todayInTimezone test above: 23:00 UTC,
+    // which is 13:00 the next day in Pacific/Kiritimati (UTC+14).
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-14T23:15:00.000Z"));
+
+    expect(currentTimeInTimezone("UTC")).toBe("23:15");
+    expect(currentTimeInTimezone("Pacific/Kiritimati")).toBe("13:15");
   });
 });
 

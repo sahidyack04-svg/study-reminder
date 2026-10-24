@@ -28,6 +28,24 @@ export function todayInTimezone(timezone: string): Date {
   return new Date(`${parts}T00:00:00.000Z`);
 }
 
+// Computes the current wall-clock time in the given IANA timezone as a
+// 24-hour "HH:mm" string, using the same Intl.DateTimeFormat-based approach
+// as todayInTimezone (rather than reading the host process's local time or
+// assuming UTC). Used by the daily-reminders cron route to compare "now" in
+// a student's own timezone against their preferred reminder times and
+// quiet-hours window, both of which are also stored as "HH:mm" strings.
+export function currentTimeInTimezone(timezone: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "00";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
+  return `${hour}:${minute}`;
+}
+
 // Renders a UTC-midnight-anchored calendar date (PlanEntry.date,
 // JournalEntry.date, etc.) for display. Plain toLocaleDateString() reads
 // the date back in the HOST process's local timezone, which can roll a
