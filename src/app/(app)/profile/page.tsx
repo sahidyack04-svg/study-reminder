@@ -2,15 +2,29 @@ import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { ProfileEditForm } from "./ProfileEditForm";
+import { NotificationPreferencesForm } from "./NotificationPreferencesForm";
+import { getPreferences, type PreferencesView } from "@/lib/notifications/preferences";
+
+const DEFAULT_PREFERENCES: PreferencesView = {
+  channel: "none",
+  preferredTimes: [],
+  phone: null,
+  quietHoursStart: null,
+  quietHoursEnd: null,
+  whatsappConsentGiven: false,
+};
 
 export default async function ProfilePage() {
   const user = await getCurrentSessionUser();
   if (!user) redirect("/login");
 
-  const profile = await prisma.studentProfile.findUnique({
-    where: { userId: user.id },
-    include: { guardian: true },
-  });
+  const [profile, preferences] = await Promise.all([
+    prisma.studentProfile.findUnique({
+      where: { userId: user.id },
+      include: { guardian: true },
+    }),
+    getPreferences(),
+  ]);
   if (!profile) redirect("/onboarding");
 
   return (
@@ -35,6 +49,9 @@ export default async function ProfilePage() {
             : null
         }
       />
+      <div className="mt-8">
+        <NotificationPreferencesForm initial={preferences ?? DEFAULT_PREFERENCES} />
+      </div>
     </div>
   );
 }
