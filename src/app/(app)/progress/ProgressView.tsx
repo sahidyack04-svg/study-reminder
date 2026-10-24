@@ -4,6 +4,7 @@ import { useState } from "react";
 import { getProgressData, type ProgressData } from "@/lib/progress/progressService";
 import { CompletionChart } from "./CompletionChart";
 import { SubjectTimeChart } from "./SubjectTimeChart";
+import { ActivityCalendar } from "./ActivityCalendar";
 
 export function ProgressView({
   initialWindow,
@@ -69,6 +70,10 @@ export function ProgressView({
             ) : (
               <p className="text-sm text-ink-muted">No subject-tagged study time yet in this period.</p>
             )}
+          </div>
+          <div className="rounded-xl bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-medium text-brand">Activity calendar</h2>
+            <ActivityCalendar data={data.completion} />
           </div>
         </>
       )}
