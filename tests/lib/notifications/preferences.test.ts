@@ -35,6 +35,19 @@ describe("getPreferences", () => {
     expect(prefs?.preferredTimes).toEqual(["18:00"]);
     expect(prefs?.whatsappConsentGiven).toBe(true);
   });
+
+  it("coerces a legacy 'browser' channel row to 'none' instead of returning a value outside the union", async () => {
+    // Onboarding once offered a "browser" channel. Passing it through
+    // unvalidated left /profile's radio group with nothing selected.
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    (prisma.reminderPreference.findUnique as any).mockResolvedValue({
+      channel: "browser", preferredTimes: JSON.stringify(["18:00"]), phone: null,
+      quietHoursStart: null, quietHoursEnd: null, whatsappConsentGivenAt: null,
+    });
+    const prefs = await getPreferences();
+    expect(prefs?.channel).toBe("none");
+  });
 });
 
 describe("updatePreferences", () => {
@@ -68,6 +81,85 @@ describe("updatePreferences", () => {
       expect.objectContaining({
         create: expect.objectContaining({ whatsappConsentGivenAt: null }),
         update: expect.objectContaining({ whatsappConsentGivenAt: null }),
+      }),
+    );
+  });
+
+  it("rejects a channel outside the 'none' | 'email' | 'whatsapp' union", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    const result = await updatePreferences({
+      channel: "browser" as any, preferredTimes: ["18:00"], whatsappConsentGiven: false,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/valid reminder channel/i);
+    expect(prisma.reminderPreference.upsert).not.toHaveBeenCalled();
+  });
+
+  // The three silent-non-delivery configurations: each one saves cleanly
+  // today and means "never remind me again" without telling the student.
+  it("rejects a non-'none' channel saved with no preferred time (would never fire)", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    const result = await updatePreferences({
+      channel: "email", preferredTimes: [], whatsappConsentGiven: false,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/preferred reminder time/i);
+    expect(prisma.reminderPreference.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a half-configured quiet-hours window (only one of start/end set)", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    const startOnly = await updatePreferences({
+      channel: "email", preferredTimes: ["18:00"], quietHoursStart: "21:00", quietHoursEnd: null,
+      whatsappConsentGiven: false,
+    });
+    expect(startOnly.success).toBe(false);
+    expect(startOnly.error).toMatch(/both a quiet hours start and end/i);
+
+    const endOnly = await updatePreferences({
+      channel: "email", preferredTimes: ["18:00"], quietHoursStart: null, quietHoursEnd: "07:00",
+      whatsappConsentGiven: false,
+    });
+    expect(endOnly.success).toBe(false);
+    expect(prisma.reminderPreference.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a preferred time that falls inside its own quiet-hours window", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+
+    // Overnight window: 22:00 sits on the late side of 21:00-07:00, so
+    // every tick at the preferred hour is suppressed, every day, forever.
+    const overnight = await updatePreferences({
+      channel: "email", preferredTimes: ["22:00"], quietHoursStart: "21:00", quietHoursEnd: "07:00",
+      whatsappConsentGiven: false,
+    });
+    expect(overnight.success).toBe(false);
+    expect(overnight.error).toMatch(/never be reminded/i);
+
+    // Same-day window, same outcome.
+    const sameDay = await updatePreferences({
+      channel: "email", preferredTimes: ["12:00"], quietHoursStart: "09:00", quietHoursEnd: "17:00",
+      whatsappConsentGiven: false,
+    });
+    expect(sameDay.success).toBe(false);
+    expect(prisma.reminderPreference.upsert).not.toHaveBeenCalled();
+  });
+
+  it("still saves a valid configuration whose preferred time sits outside its quiet hours", async () => {
+    (getCurrentSessionUser as any).mockResolvedValue(sessionUser);
+    (prisma.studentProfile.findUnique as any).mockResolvedValue(profile);
+    const result = await updatePreferences({
+      channel: "email", preferredTimes: ["18:00"], quietHoursStart: "21:00", quietHoursEnd: "07:00",
+      whatsappConsentGiven: false,
+    });
+    expect(result.success).toBe(true);
+    expect(prisma.reminderPreference.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ quietHoursStart: "21:00", quietHoursEnd: "07:00" }),
       }),
     );
   });
