@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
-import { todayInTimezone, currentTimeInTimezone } from "@/lib/validation/age";
+import { isWithinQuietHours } from "@/lib/notifications/quietHours";
+import { todayInTimezone, currentTimeInTimezone, formatUTCDate } from "@/lib/validation/age";
 
 // This route has no NextAuth session involved at all -- Vercel Cron calls it
 // on a schedule (see vercel.json) and authenticates with a shared secret
@@ -20,26 +21,6 @@ function isAuthorized(request: Request): boolean {
 // minute. Per-day idempotency is handled separately by ReminderLog.
 function hasReachedAPreferredTime(current: string, preferredTimes: string[]): boolean {
   return preferredTimes.some((preferred) => current >= preferred);
-}
-
-// Quiet-hours containment, evaluated against the CURRENT time in the
-// student's timezone (not the preferred time) -- quiet hours describe when
-// it is currently not okay to disturb the student, independent of which
-// configured preferred time caused this invocation to consider sending.
-//
-// Two shapes:
-//  - same-day window (start < end), e.g. "09:00"-"17:00": inside if
-//    start <= current < end.
-//  - overnight window (start > end), e.g. "21:00"-"07:00": the window wraps
-//    past midnight, so "inside" is current >= start (the late side, before
-//    midnight) OR current < end (the early side, after midnight) -- a plain
-//    start <= current < end range check would incorrectly treat this case
-//    as *always* outside the window.
-function isWithinQuietHours(current: string, start: string | null, end: string | null): boolean {
-  if (!start || !end) return false;
-  if (start < end) return current >= start && current < end;
-  if (start > end) return current >= start || current < end;
-  return false; // start === end: a zero-length window suppresses nothing
 }
 
 export async function GET(request: Request) {
@@ -71,7 +52,16 @@ export async function GET(request: Request) {
       if (!hasReachedAPreferredTime(current, preferredTimes)) continue;
       if (isWithinQuietHours(current, preference.quietHoursStart, preference.quietHoursEnd)) continue;
 
-      const channel = preference.channel as "email" | "whatsapp";
+      // Only the channels this route actually knows how to deliver on get
+      // past here. Anything else -- notably the legacy "browser" value an
+      // earlier version of onboarding could write -- is an unhandled
+      // channel: skip it outright rather than casting it to a channel it
+      // isn't, writing a ReminderLog row with a value outside the column's
+      // documented domain, or counting it as a delivery failure (nothing
+      // failed; there is simply nothing this route can deliver).
+      const channel = preference.channel;
+      if (channel !== "email" && channel !== "whatsapp") continue;
+
       // Stored calendar date, anchored the same way as every other
       // date-only column in this codebase -- never a bare `new Date()`.
       const today = todayInTimezone(profile.timezone);
@@ -103,19 +93,36 @@ export async function GET(request: Request) {
             where: { studentProfileId: profile.id, status: "open" },
           });
 
+          // The nearest upcoming deadline, defined exactly as the dashboard
+          // defines it (see src/app/(app)/dashboard/page.tsx): among the
+          // student's open tasks, those due today or later, earliest first.
+          // The dashboard reaches it via listTasks() + filter/sort, which is
+          // session-scoped and unusable from this unauthenticated route, so
+          // the same filter and ordering are expressed as one query here
+          // rather than loading every task just to drop most of them.
+          const nextDueTask = await tx.task.findFirst({
+            where: { studentProfileId: profile.id, status: "open", dueDate: { gte: today } },
+            orderBy: { dueDate: "asc" },
+            select: { title: true, dueDate: true },
+          });
+          const deadlineSentence = nextDueTask?.dueDate
+            ? `Your nearest deadline is "${nextDueTask.title}" on ${formatUTCDate(nextDueTask.dueDate)}.`
+            : "You have no upcoming deadlines.";
+
           let delivered = false;
           if (channel === "email") {
             const result = await sendEmail({
               to: profile.user?.email ?? "",
               subject: "Your study reminder",
-              body: `You have ${openTaskCount} open task${openTaskCount === 1 ? "" : "s"} waiting. Keep up the momentum!`,
+              body: `You have ${openTaskCount} open task${openTaskCount === 1 ? "" : "s"} waiting. ${deadlineSentence} Keep up the momentum!`,
             });
             delivered = result.delivered;
           } else {
-            // channel === "whatsapp": no WhatsApp provider is wired up yet.
-            // This is a deliberate, honest skip -- record that nothing was
-            // delivered rather than calling anything that could be mistaken
-            // for a real send.
+            // channel === "whatsapp" (the only other value the guard above
+            // lets through): no WhatsApp provider is wired up yet. This is a
+            // deliberate, honest skip -- record that nothing was delivered
+            // rather than calling anything that could be mistaken for a real
+            // send.
             delivered = false;
           }
 

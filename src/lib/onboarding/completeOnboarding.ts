@@ -19,7 +19,7 @@ export interface OnboardingInput {
   timetable: { dayOfWeek: number; subjectName?: string; startTime: string; endTime: string }[];
   availability: { dayOfWeek: number; startTime: string; endTime: string }[];
   goals: { description: string; examDate?: string; subjectName?: string }[];
-  reminderChannel: "browser" | "email" | "whatsapp" | "none";
+  reminderChannel: "none" | "email" | "whatsapp";
   preferredTimes: string[];
   phone?: string;
   guardian?: { name: string; email: string };
@@ -37,6 +37,15 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
   const user = await getCurrentSessionUser();
   if (!user) {
     return { success: false, error: "You must be signed in to complete onboarding." };
+  }
+
+  // The ReminderPreference.channel domain is "none" | "email" | "whatsapp"
+  // (see prisma/schema.prisma). This is a reachable server action, so the
+  // type annotation alone does not stop a client posting the long-retired
+  // "browser" value -- a row the notification preferences UI and the
+  // daily-reminders cron route both have no sane handling for.
+  if (!["none", "email", "whatsapp"].includes(input.reminderChannel)) {
+    return { success: false, error: "Choose a valid reminder channel." };
   }
 
   if (hasOverlap(input.timetable)) {

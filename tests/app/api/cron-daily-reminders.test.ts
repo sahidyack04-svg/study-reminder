@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     studentProfile: { findMany: vi.fn() },
-    task: { count: vi.fn() },
+    task: { count: vi.fn(), findFirst: vi.fn() },
     reminderLog: { findUnique: vi.fn(), create: vi.fn() },
     // $executeRaw backs the pg_advisory_xact_lock call inside the
     // $transaction callback (same pattern as checkRateLimit's tests) --
@@ -30,6 +30,7 @@ describe("GET /api/cron/daily-reminders", () => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = "test-secret";
     (prisma.$transaction as any).mockImplementation((cb: any) => cb(prisma));
+    (prisma.task.findFirst as any).mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -114,6 +115,77 @@ describe("GET /api/cron/daily-reminders", () => {
     expect(prisma.reminderLog.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ channel: "whatsapp", delivered: false }) }),
     );
+  });
+
+  it("skips a legacy 'browser'-channel row entirely: no send, no ReminderLog row, not counted as failed", async () => {
+    // "browser" was offered by an early version of onboarding and is
+    // outside ReminderLog.channel's documented domain. The route used to
+    // cast it to "email" | "whatsapp" and fall into the whatsapp branch,
+    // writing a log row for a channel it cannot deliver on.
+    (prisma.studentProfile.findMany as any).mockResolvedValue([
+      {
+        id: "p1", timezone: "UTC",
+        reminderPreference: { channel: "browser", preferredTimes: JSON.stringify(["00:00"]), quietHoursStart: null, quietHoursEnd: null },
+      },
+    ]);
+    (prisma.reminderLog.findUnique as any).mockResolvedValue(null);
+
+    const res = await GET(req("test-secret"));
+
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(prisma.reminderLog.create).not.toHaveBeenCalled();
+    expect(await res.json()).toEqual({ processed: 0, failed: 0 });
+  });
+
+  describe("reminder email content", () => {
+    function emailStudent() {
+      (prisma.studentProfile.findMany as any).mockResolvedValue([
+        {
+          id: "p1", timezone: "UTC",
+          user: { email: "student@example.test" },
+          reminderPreference: { channel: "email", preferredTimes: JSON.stringify(["00:00"]), quietHoursStart: null, quietHoursEnd: null },
+        },
+      ]);
+      (prisma.reminderLog.findUnique as any).mockResolvedValue(null);
+      (sendEmail as any).mockResolvedValue({ delivered: true });
+    }
+
+    it("includes the open task count and the nearest upcoming deadline", async () => {
+      emailStudent();
+      (prisma.task.count as any).mockResolvedValue(3);
+      (prisma.task.findFirst as any).mockResolvedValue({
+        title: "Physics problem set",
+        dueDate: new Date("2026-10-26T00:00:00.000Z"),
+      });
+
+      await GET(req("test-secret"));
+
+      const body = (sendEmail as any).mock.calls[0][0].body as string;
+      expect(body).toContain("3 open tasks");
+      expect(body).toContain("Physics problem set");
+      // UTC-anchored rendering, same as every other stored calendar date.
+      expect(body).toContain(new Date("2026-10-26T00:00:00.000Z").toLocaleDateString(undefined, { timeZone: "UTC" }));
+
+      // Nearest upcoming = earliest open task due today or later, exactly
+      // the dashboard's "Upcoming" definition.
+      const where = (prisma.task.findFirst as any).mock.calls[0][0];
+      expect(where).toMatchObject({
+        where: { studentProfileId: "p1", status: "open", dueDate: { gte: expect.any(Date) } },
+        orderBy: { dueDate: "asc" },
+      });
+    });
+
+    it("says there are no upcoming deadlines rather than omitting the sentence", async () => {
+      emailStudent();
+      (prisma.task.count as any).mockResolvedValue(1);
+      (prisma.task.findFirst as any).mockResolvedValue(null);
+
+      await GET(req("test-secret"));
+
+      const body = (sendEmail as any).mock.calls[0][0].body as string;
+      expect(body).toContain("1 open task");
+      expect(body).toContain("no upcoming deadlines");
+    });
   });
 
   describe("overnight quiet hours (21:00-07:00)", () => {

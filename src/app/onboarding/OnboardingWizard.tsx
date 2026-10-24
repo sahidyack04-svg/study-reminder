@@ -434,7 +434,6 @@ function ReminderStep({
         className="rounded-lg border border-border px-4 py-2"
       >
         <option value="none">No reminders for now</option>
-        <option value="browser">Browser notifications</option>
         <option value="email">Email</option>
         <option value="whatsapp">WhatsApp</option>
       </select>
