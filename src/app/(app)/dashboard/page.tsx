@@ -5,9 +5,11 @@ import { prisma } from "@/lib/db/prisma";
 import { getDashboardBannerState } from "@/lib/dashboard/bannerState";
 import { listTasks } from "@/lib/tasks/tasks";
 import { getOrGeneratePlanForDate } from "@/lib/plan/planService";
-import { getCurrentStreak } from "@/lib/progress/progressService";
+import { getStreakStats } from "@/lib/progress/progressService";
 import { getTodayEntry } from "@/lib/journal/journal";
 import { todayInTimezone } from "@/lib/validation/age";
+import { summarizeStreakCard } from "@/lib/progress/dashboardStreakCard";
+import { computeAchievements } from "@/lib/progress/achievements";
 
 interface PlanEntryRow {
   id: string;
@@ -52,7 +54,7 @@ export default async function DashboardPage() {
   const planEntries = planEntriesRaw as PlanEntryRow[];
   const planDoneCount = planEntries.filter((e) => e.checkInStatus === "done").length;
 
-  const streak = await getCurrentStreak();
+  const streakStats = await getStreakStats();
   const todayJournalEntry = await getTodayEntry();
 
   const todayLabel = today.toLocaleDateString(undefined, {
@@ -78,10 +80,9 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatTile label="Today's plan" value={`${planDoneCount}/${planEntries.length}`} hint="items done" />
         <StatTile label="Open tasks" value={String(openTasks.length)} hint={overdueTasks.length > 0 ? `${overdueTasks.length} overdue` : "on track"} warn={overdueTasks.length > 0} />
-        <StatTile label="Check-in streak" value={String(streak)} hint={streak === 1 ? "day" : "days"} />
         <StatTile label="Subjects" value={String(profile.subjects.length)} hint={profile.subjects.length === 1 ? "subject" : "subjects"} />
       </div>
 
@@ -148,6 +149,32 @@ export default async function DashboardPage() {
                 ))}
               </ul>
             )}
+          </Card>
+
+          <Card title="Progress">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-ink">{summarizeStreakCard(streakStats)}</p>
+
+              <div className="flex flex-col gap-2 text-xs text-ink-muted">
+                <div>Longest streak: <span className="font-semibold text-ink">{streakStats.longest}</span> days</div>
+                <div>Total active days: <span className="font-semibold text-ink">{streakStats.totalActiveDays}</span></div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {computeAchievements(streakStats.longest).map((achievement) => (
+                  <span
+                    key={achievement.days}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      achievement.unlocked
+                        ? "bg-warning-light text-warning"
+                        : "bg-surface-page text-ink-muted"
+                    }`}
+                  >
+                    {achievement.days}d
+                  </span>
+                ))}
+              </div>
+            </div>
           </Card>
 
           <Card title="Journal" action={{ href: "/journal", label: todayJournalEntry ? "Edit entry" : "Write entry" }}>
