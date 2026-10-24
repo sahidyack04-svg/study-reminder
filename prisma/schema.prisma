@@ -85,6 +85,7 @@ model StudentProfile {
   questions           Question[]
   tests               Test[]
   reminderPreference  ReminderPreference?
+  reminderLogs        ReminderLog[]
 }
 
 model Guardian {
@@ -203,13 +204,29 @@ model Goal {
 }
 
 model ReminderPreference {
-  id               String   @id @default(cuid())
-  studentProfileId String   @unique
-  channel          String // "browser" | "email" | "whatsapp" | "none"
-  preferredTimes   String // JSON-encoded string[] of "HH:mm" — SQLite has no array type; see spec's portability note
-  phone            String?
+  id                     String    @id @default(cuid())
+  studentProfileId       String    @unique
+  channel                String // "none" | "email" | "whatsapp"
+  preferredTimes         String // JSON-encoded string[] of "HH:mm"
+  phone                  String?
+  quietHoursStart        String? // "HH:mm"
+  quietHoursEnd          String? // "HH:mm"
+  whatsappConsentGivenAt DateTime?
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+}
+
+model ReminderLog {
+  id               String   @id @default(cuid())
+  studentProfileId String
+  date             DateTime // UTC-midnight-anchored calendar date
+  channel          String // "email" | "whatsapp"
+  delivered        Boolean
+  createdAt        DateTime @default(now())
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([studentProfileId, date, channel])
 }
 
 model Task {
