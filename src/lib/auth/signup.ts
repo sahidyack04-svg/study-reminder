@@ -3,8 +3,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { validatePassword } from "@/lib/validation/password";
-import { generateToken, hashToken, tokenExpiryDate } from "@/lib/validation/tokens";
-import { sendEmail } from "@/lib/email/send";
 import { checkRateLimit } from "@/lib/security/rateLimit";
 
 export interface SignupInput {
@@ -15,7 +13,6 @@ export interface SignupInput {
 export interface SignupResult {
   success: boolean;
   error?: string;
-  emailDelivered?: boolean;
 }
 
 export async function signupStudent({ email, password }: SignupInput): Promise<SignupResult> {
@@ -41,20 +38,9 @@ export async function signupStudent({ email, password }: SignupInput): Promise<S
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({ data: { email, passwordHash } });
+    await prisma.user.create({ data: { email, passwordHash } });
 
-    const token = generateToken();
-    await prisma.verificationToken.create({
-      data: { token: hashToken(token), userId: user.id, purpose: "email_verify", expiresAt: tokenExpiryDate(24) },
-    });
-
-    const emailResult = await sendEmail({
-      to: email,
-      subject: "Verify your Study Reminder account",
-      body: `Welcome to Study Reminder! Verify your email here: ${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`,
-    });
-
-    return { success: true, emailDelivered: emailResult.delivered };
+    return { success: true };
   } catch {
     return { success: false, error: "Something went wrong. Please try again." };
   }

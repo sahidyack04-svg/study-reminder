@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { approveGuardianConsent } from "@/lib/onboarding/guardianConsentActions";
+import { Starfield } from "@/components/cosmic/Starfield";
+import { Logo } from "@/components/cosmic/Logo";
 
 export default function GuardianConsentPage() {
   const params = useParams<{ token: string }>();
@@ -18,8 +20,10 @@ export default function GuardianConsentPage() {
 
   if (result) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-page px-4 py-16 text-center">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 shadow-sm">
+      <main className="flex min-h-screen items-center justify-center px-4 py-16 text-center">
+        <Starfield intensity="ambient" />
+        <div className="animate-fade-up w-full max-w-md panel-cosmic-raised p-8">
+          <Logo size={28} className="mx-auto mb-6 w-fit" />
           {result.success ? (
             <p className="text-ink-muted">
               {result.alreadyApproved
@@ -35,8 +39,10 @@ export default function GuardianConsentPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-page px-4 py-16 text-center">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-8 shadow-sm">
+    <main className="flex min-h-screen items-center justify-center px-4 py-16 text-center">
+      <Starfield intensity="ambient" />
+      <div className="animate-fade-up w-full max-w-md panel-cosmic-raised p-8">
+        <Logo size={28} className="mx-auto mb-6 w-fit" />
         <h1 className="mb-4 text-2xl font-semibold text-ink">Guardian approval requested</h1>
         <p className="mb-8 text-ink-muted">
           A student has listed you as their guardian on Study Reminder and needs your consent to use the app.
@@ -44,7 +50,7 @@ export default function GuardianConsentPage() {
         <button
           onClick={handleApprove}
           disabled={submitting}
-          className="rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+          className="rounded-lg bg-brand px-6 py-3 font-semibold text-cosmic-void shadow-glow transition hover:bg-brand-dark disabled:opacity-60"
         >
           {submitting ? "Submitting..." : "Yes, I approve"}
         </button>

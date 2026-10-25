@@ -11,7 +11,15 @@ import { checkRateLimit } from "@/lib/security/rateLimit";
 
 const RESET_TOKEN_EXPIRY_HOURS = 1;
 
-export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
+export async function requestPasswordReset(email: string): Promise<{ success: boolean; emailAvailable: boolean }> {
+  // In production with no provider configured, email delivery genuinely cannot happen for
+  // anyone - say so honestly instead of claiming a link was sent. This check runs before
+  // any account lookup, so it can't be used to distinguish real accounts from fake ones.
+  const emailProviderConfigured = Boolean(process.env.RESEND_API_KEY);
+  if (!emailProviderConfigured && process.env.NODE_ENV === "production") {
+    return { success: true, emailAvailable: false };
+  }
+
   const rateLimit = await checkRateLimit({
     action: "password_reset",
     identifier: email,
@@ -19,7 +27,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     windowMs: 60 * 60 * 1000,
   });
   if (!rateLimit.allowed) {
-    return { success: true }; // still don't reveal anything; just silently skip sending
+    return { success: true, emailAvailable: true }; // still don't reveal anything; just silently skip sending
   }
 
   try {
@@ -44,7 +52,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   } catch (err) {
     console.error("[requestPasswordReset] failed to process password reset request:", err);
   }
-  return { success: true };
+  return { success: true, emailAvailable: true };
 }
 
 export async function resetPassword(

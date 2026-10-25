@@ -18,7 +18,7 @@ export async function verifyCredentials(
   if (!rateLimit.allowed) return null;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !user.emailVerified) return null;
+  if (!user) return null;
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) return null;

@@ -57,6 +57,19 @@ describe("ForgotPasswordPage", () => {
     });
   });
 
+  it("shows an honest unavailable message when the server reports no email provider", async () => {
+    (requestPasswordReset as any).mockResolvedValue({ success: true, emailAvailable: false });
+    render(<ForgotPasswordPage />);
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "student@example.test" } });
+    fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/if an account exists/i)).not.toBeInTheDocument();
+  });
+
   it("links back to the login page", () => {
     render(<ForgotPasswordPage />);
     expect(screen.getByRole("link", { name: /back to login/i })).toHaveAttribute("href", "/login");

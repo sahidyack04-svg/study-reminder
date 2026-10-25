@@ -70,6 +70,29 @@ describe("requestPasswordReset", () => {
     expect(result.success).toBe(true);
     expect(sendEmail).toHaveBeenCalled();
   });
+
+  it("reports emailAvailable:false and skips the DB entirely in production with no provider configured", async () => {
+    const originalEnv = process.env.NODE_ENV;
+    const originalKey = process.env.RESEND_API_KEY;
+    (process.env as any).NODE_ENV = "production";
+    delete process.env.RESEND_API_KEY;
+
+    try {
+      const result = await requestPasswordReset("a@example.test");
+      expect(result).toEqual({ success: true, emailAvailable: false });
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(sendEmail).not.toHaveBeenCalled();
+    } finally {
+      (process.env as any).NODE_ENV = originalEnv;
+      if (originalKey !== undefined) process.env.RESEND_API_KEY = originalKey;
+    }
+  });
+
+  it("reports emailAvailable:true for a normal successful send", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "u1", email: "a@example.test" });
+    const result = await requestPasswordReset("a@example.test");
+    expect(result.emailAvailable).toBe(true);
+  });
 });
 
 describe("resetPassword", () => {
