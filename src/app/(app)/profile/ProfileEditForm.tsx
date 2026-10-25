@@ -5,6 +5,9 @@ import { updateStudentProfile, type ProfileEditableFields } from "@/lib/onboardi
 import { resendGuardianConsentForCurrentUser } from "@/lib/onboarding/guardianConsentActions";
 import { requiresGuardianConsent } from "@/lib/validation/age";
 
+const INPUT_CLASS =
+  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40";
+
 export interface ProfileEditFormProps {
   initial: ProfileEditableFields;
   guardianStatus: { email: string; approved: boolean } | null;
@@ -58,13 +61,13 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
   const showGuardianFields = !!guardianStatus || isMinor;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm">
+    <form onSubmit={handleSubmit} className="panel-cosmic flex flex-col gap-4 p-6">
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-ink">Name</span>
         <input
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
-          className="rounded-lg border border-border px-4 py-2"
+          className={INPUT_CLASS}
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -73,7 +76,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
           type="date"
           value={form.dateOfBirth}
           onChange={(e) => update("dateOfBirth", e.target.value)}
-          className="rounded-lg border border-border px-4 py-2"
+          className={`${INPUT_CLASS} [color-scheme:dark]`}
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -81,7 +84,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
         <input
           value={form.grade}
           onChange={(e) => update("grade", e.target.value)}
-          className="rounded-lg border border-border px-4 py-2"
+          className={INPUT_CLASS}
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -89,7 +92,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
         <input
           value={form.schoolName}
           onChange={(e) => update("schoolName", e.target.value)}
-          className="rounded-lg border border-border px-4 py-2"
+          className={INPUT_CLASS}
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -97,7 +100,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
         <input
           value={form.curriculum}
           onChange={(e) => update("curriculum", e.target.value)}
-          className="rounded-lg border border-border px-4 py-2"
+          className={INPUT_CLASS}
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -105,12 +108,12 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
         <input
           value={form.academicYear}
           onChange={(e) => update("academicYear", e.target.value)}
-          className="rounded-lg border border-border px-4 py-2"
+          className={INPUT_CLASS}
         />
       </label>
 
       {showGuardianFields && (
-        <div className="rounded-lg bg-brand-light p-4">
+        <div className="rounded-lg border border-border bg-cosmic-deep/40 p-4">
           {guardianStatus ? (
             <p className="mb-2 text-sm text-ink-muted">
               Guardian: {guardianStatus.email} — {guardianStatus.approved ? "approved" : "pending approval"}
@@ -127,7 +130,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
             <input
               value={form.guardian?.name ?? ""}
               onChange={(e) => update("guardian", { name: e.target.value, email: form.guardian?.email ?? "" })}
-              className="rounded-lg border border-border px-4 py-2"
+              className={INPUT_CLASS}
             />
           </label>
           <label className="mt-2 flex flex-col gap-1">
@@ -137,7 +140,7 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
             <input
               value={form.guardian?.email ?? ""}
               onChange={(e) => update("guardian", { name: form.guardian?.name ?? "", email: e.target.value })}
-              className="rounded-lg border border-border px-4 py-2"
+              className={INPUT_CLASS}
             />
           </label>
           <p className="mt-2 text-xs text-ink-muted">
@@ -151,28 +154,28 @@ export function ProfileEditForm({ initial, guardianStatus }: ProfileEditFormProp
                 type="button"
                 onClick={handleResendConsent}
                 disabled={resendStatus === "sending"}
-                className="rounded-full border border-border px-4 py-2 text-sm text-brand disabled:opacity-60"
+                className="glow-interactive rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink transition hover:border-brand hover:text-brand disabled:opacity-60"
               >
                 {resendStatus === "sending" ? "Sending..." : "Resend consent email"}
               </button>
               {resendStatus === "sent" && (
-                <p className="mt-2 text-sm text-green-700">Consent email sent again.</p>
+                <p className="mt-2 text-sm text-success">Consent email sent again.</p>
               )}
               {resendStatus === "error" && resendError && (
-                <p className="mt-2 text-sm text-red-600">{resendError}</p>
+                <p className="mt-2 text-sm text-danger">{resendError}</p>
               )}
             </div>
           )}
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {status === "saved" && <p className="text-sm text-green-700">Saved.</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
+      {status === "saved" && <p className="text-sm text-success">Saved.</p>}
 
       <button
         type="submit"
         disabled={status === "saving"}
-        className="self-start rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+        className="self-start rounded-lg bg-brand px-4 py-2 font-semibold text-cosmic-void shadow-glow transition hover:bg-brand-dark disabled:opacity-60"
       >
         {status === "saving" ? "Saving..." : "Save changes"}
       </button>

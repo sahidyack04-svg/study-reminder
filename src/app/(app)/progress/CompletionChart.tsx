@@ -5,6 +5,11 @@ interface CompletionPoint {
   percentDone: number;
 }
 
+// Token values that Tailwind classes can't reach inside SVG paint attributes.
+const GRID_STROKE = "rgba(148, 174, 214, 0.16)"; // border.DEFAULT
+const AXIS_TEXT = "#8FA0C2"; // ink.muted
+const SERIES_COLOR = "#22D3EE"; // brand.DEFAULT
+
 export function CompletionChart({ data }: { data: CompletionPoint[] }) {
   const barWidth = 28;
   const gap = 8;
@@ -12,8 +17,23 @@ export function CompletionChart({ data }: { data: CompletionPoint[] }) {
   const width = data.length * (barWidth + gap);
 
   return (
-    <div>
+    <div className="overflow-x-auto">
       <svg width={width} height={chartHeight + 24} role="img" aria-label="Daily study completion percentage">
+        {[0, 25, 50, 75, 100].map((tick) => {
+          const y = chartHeight - (tick / 100) * chartHeight;
+          return (
+            <line
+              key={`grid-${tick}`}
+              x1={0}
+              x2={width}
+              y1={y}
+              y2={y}
+              stroke={GRID_STROKE}
+              strokeWidth={1}
+              shapeRendering="crispEdges"
+            />
+          );
+        })}
         {data.map((point, i) => {
           const barHeight = (point.percentDone / 100) * chartHeight;
           const opacity = Math.max(0.15, point.percentDone / 100);
@@ -26,14 +46,14 @@ export function CompletionChart({ data }: { data: CompletionPoint[] }) {
                 width={barWidth}
                 height={barHeight}
                 rx={4}
-                fill="#e87ba4"
+                fill={SERIES_COLOR}
                 fillOpacity={opacity}
               >
                 <title>
                   {formatUTCDate(point.date)}: {point.percentDone}% done
                 </title>
               </rect>
-              <text x={x + barWidth / 2} y={chartHeight + 16} textAnchor="middle" fontSize={10} fill="#52514e">
+              <text x={x + barWidth / 2} y={chartHeight + 16} textAnchor="middle" fontSize={10} fill={AXIS_TEXT}>
                 {point.percentDone}%
               </text>
             </g>

@@ -3,5 +3,53 @@
 @tailwind utilities;
 
 body {
-  @apply bg-surface-page text-ink;
+  @apply bg-cosmic-void text-ink;
+}
+
+@layer components {
+  /* Translucent cosmic card, replacing the old flat `bg-white` card pattern. */
+  .panel-cosmic {
+    @apply rounded-xl border border-border bg-surface shadow-panel backdrop-blur-md;
+  }
+
+  .panel-cosmic-raised {
+    @apply rounded-xl border border-border bg-surface-raised shadow-panel backdrop-blur-md;
+  }
+
+  /* Hover/focus accent used on nav items, buttons, interactive rows. */
+  .glow-interactive {
+    @apply transition duration-200 ease-out;
+  }
+  .glow-interactive:hover {
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.3), 0 0 18px -6px rgba(34, 211, 238, 0.45);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 12px rgba(34, 211, 238, 0.45);
+  }
+}
+
+/* Respect reduced-motion: freeze decorative animation, keep the static backdrop. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Slim, low-contrast scrollbar that fits the dark theme (cosmetic only). */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 174, 214, 0.25);
+  border-radius: 999px;
 }

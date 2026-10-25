@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { LandingHeader } from "./LandingHeader";
+import { Starfield } from "@/components/cosmic/Starfield";
+import { Logo } from "@/components/cosmic/Logo";
 
 const FEATURES = [
   {
@@ -49,14 +51,16 @@ const FAQS = [
 
 export default function Home() {
   return (
-    <div>
+    <div className="relative">
+      <Starfield intensity="cinematic" />
+
       <LandingHeader />
 
       <main>
-        <section className="mx-auto max-w-6xl px-4 py-16 lg:px-8 lg:py-24">
-          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-            <div>
-              <h1 className="text-4xl font-semibold leading-tight text-ink lg:text-5xl">
+        <section className="relative overflow-hidden px-4 py-16 lg:px-8 lg:py-24">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2">
+            <div className="animate-fade-up">
+              <h1 className="text-glow text-4xl font-semibold leading-tight text-ink lg:text-5xl">
                 Stay on top of every subject, every day.
               </h1>
               <p className="mt-5 max-w-xl text-lg text-ink-muted">
@@ -64,25 +68,34 @@ export default function Home() {
                 then tracks what actually got done, honestly.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <Link href="/signup" className="rounded-full bg-brand px-6 py-3 font-medium text-white shadow-sm transition hover:bg-brand-dark">
+                <Link
+                  href="/signup"
+                  className="animate-pulse-glow rounded-full bg-brand px-6 py-3 font-semibold text-cosmic-void transition duration-200 hover:bg-brand-dark"
+                >
                   Start planning
                 </Link>
-                <a href="#features" className="rounded-full border border-border px-6 py-3 font-medium text-ink transition hover:border-brand hover:text-brand">
+                <a
+                  href="#features"
+                  className="glow-interactive rounded-full border border-border px-6 py-3 font-medium text-ink transition hover:border-brand hover:text-brand"
+                >
                   Explore features
                 </a>
               </div>
             </div>
 
-            <DashboardPreview />
+            <div className="relative animate-fade-up [animation-delay:150ms]">
+              <OrbitRing />
+              <DashboardPreview />
+            </div>
           </div>
         </section>
 
-        <section id="features" className="border-t border-border bg-white px-4 py-16 lg:px-8 lg:py-24">
+        <section id="features" className="animate-fade-up border-t border-border px-4 py-16 lg:px-8 lg:py-24">
           <div className="mx-auto max-w-6xl">
             <h2 className="text-center text-2xl font-semibold text-ink lg:text-3xl">Everything your study routine actually needs</h2>
             <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map((f) => (
-                <div key={f.title} className="rounded-xl border border-border p-6">
+                <div key={f.title} className="panel-cosmic glow-interactive p-6 hover:border-brand/40">
                   <h3 className="text-base font-semibold text-ink">{f.title}</h3>
                   <p className="mt-2 text-sm text-ink-muted">{f.desc}</p>
                 </div>
@@ -91,7 +104,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="how-it-works" className="px-4 py-16 lg:px-8 lg:py-24">
+        <section id="how-it-works" className="animate-fade-up px-4 py-16 lg:px-8 lg:py-24">
           <div className="mx-auto max-w-5xl">
             <h2 className="text-center text-2xl font-semibold text-ink lg:text-3xl">How it works</h2>
             <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-3">
@@ -101,7 +114,7 @@ export default function Home() {
                 { step: "3", title: "Check in honestly", desc: "Mark each item done, partial, or not done — your progress reflects reality." },
               ].map((s) => (
                 <div key={s.step} className="text-center">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-semibold text-cosmic-void shadow-glow">
                     {s.step}
                   </div>
                   <h3 className="mt-4 text-base font-semibold text-ink">{s.title}</h3>
@@ -112,45 +125,47 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="faq" className="border-t border-border bg-white px-4 py-16 lg:px-8 lg:py-24">
+        <section id="faq" className="animate-fade-up border-t border-border px-4 py-16 lg:px-8 lg:py-24">
           <div className="mx-auto max-w-3xl">
             <h2 className="text-center text-2xl font-semibold text-ink lg:text-3xl">Frequently asked questions</h2>
-            <div className="mt-10 flex flex-col divide-y divide-border">
+            <div className="mt-10 flex flex-col gap-3">
               {FAQS.map((item) => (
-                <details key={item.q} className="group py-4">
+                <details key={item.q} className="panel-cosmic glow-interactive group px-5 py-4 open:border-brand/40">
                   <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-ink">
                     {item.q}
-                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180">
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0 text-brand transition group-open:rotate-180">
                       <path d="M5 7.5l5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </summary>
-                  <p className="mt-2 text-sm text-ink-muted">{item.a}</p>
+                  <p className="mt-3 border-t border-border pt-3 text-sm text-ink-muted">{item.a}</p>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="px-4 py-16 text-center lg:px-8 lg:py-24">
-          <h2 className="text-2xl font-semibold text-ink lg:text-3xl">Ready to plan your day?</h2>
-          <p className="mx-auto mt-3 max-w-md text-ink-muted">Create a free account and get your first study plan in minutes.</p>
-          <Link href="/signup" className="mt-8 inline-block rounded-full bg-brand px-8 py-3 font-medium text-white shadow-sm transition hover:bg-brand-dark">
-            Create your account
-          </Link>
+        <section className="animate-fade-up px-4 py-16 text-center lg:px-8 lg:py-24">
+          <div className="panel-cosmic-raised mx-auto max-w-2xl px-6 py-12 lg:px-10">
+            <h2 className="text-glow text-2xl font-semibold text-ink lg:text-3xl">Ready to plan your day?</h2>
+            <p className="mx-auto mt-3 max-w-md text-ink-muted">Create a free account and get your first study plan in minutes.</p>
+            <Link
+              href="/signup"
+              className="glow-interactive mt-8 inline-block rounded-full bg-brand px-8 py-3 font-semibold text-cosmic-void shadow-glow transition hover:bg-brand-dark"
+            >
+              Create your account
+            </Link>
+          </div>
         </section>
       </main>
 
-      <footer className="border-t border-border bg-white px-4 py-10 lg:px-8">
+      <footer className="border-t border-border bg-cosmic-void/60 px-4 py-10 backdrop-blur-md lg:px-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-xs font-bold text-white">SR</span>
-            <span className="text-sm font-semibold text-ink">Study Reminder</span>
-          </div>
+          <Logo size={26} />
           <nav className="flex gap-6 text-sm text-ink-muted" aria-label="Footer navigation">
-            <a href="#features" className="hover:text-ink">Features</a>
-            <a href="#how-it-works" className="hover:text-ink">How it works</a>
-            <a href="#faq" className="hover:text-ink">FAQ</a>
-            <Link href="/login" className="hover:text-ink">Sign in</Link>
+            <a href="#features" className="transition hover:text-brand">Features</a>
+            <a href="#how-it-works" className="transition hover:text-brand">How it works</a>
+            <a href="#faq" className="transition hover:text-brand">FAQ</a>
+            <Link href="/login" className="transition hover:text-brand">Sign in</Link>
           </nav>
         </div>
       </footer>
@@ -158,16 +173,35 @@ export default function Home() {
   );
 }
 
+/** Decorative orbit: a pair of faint rings with a cyan satellite dot tracking the outer one. */
+function OrbitRing() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 lg:block"
+    >
+      <div className="absolute inset-0 rounded-full border border-border" />
+      <div className="absolute inset-10 rounded-full border border-brand/20" />
+      <div className="absolute inset-0 animate-orbit">
+        <span className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand shadow-glow" />
+      </div>
+      <div className="absolute inset-10 animate-orbit [animation-direction:reverse] [animation-duration:40s]">
+        <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet shadow-glow-violet" />
+      </div>
+    </div>
+  );
+}
+
 function DashboardPreview() {
   return (
-    <div className="rounded-2xl border border-border bg-white p-4 shadow-sm lg:p-5" aria-hidden="true">
+    <div className="panel-cosmic-raised relative animate-burst-in p-4 lg:p-5" aria-hidden="true">
       <div className="mb-4 flex items-center gap-2">
         <span className="h-2.5 w-2.5 rounded-full bg-danger/60" />
         <span className="h-2.5 w-2.5 rounded-full bg-warning/60" />
         <span className="h-2.5 w-2.5 rounded-full bg-success/60" />
       </div>
       <div className="grid grid-cols-4 gap-3">
-        <div className="col-span-1 flex flex-col gap-2 rounded-lg bg-surface-page p-2">
+        <div className="col-span-1 flex flex-col gap-2 rounded-lg border border-border bg-cosmic-void/50 p-2">
           {["Dashboard", "Study plan", "Tasks", "Journal", "Progress"].map((label, i) => (
             <div key={label} className={`rounded px-2 py-1.5 text-[10px] font-medium ${i === 0 ? "bg-brand-light text-brand" : "text-ink-muted"}`}>
               {label}
@@ -177,18 +211,18 @@ function DashboardPreview() {
         <div className="col-span-3 flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-2">
             {["3/5", "4", "6"].map((v, i) => (
-              <div key={i} className="rounded-lg border border-border p-2">
-                <div className="h-1.5 w-8 rounded bg-surface-page" />
+              <div key={i} className="rounded-lg border border-border bg-cosmic-void/40 p-2">
+                <div className="h-1.5 w-8 rounded bg-ink-faint/40" />
                 <p className="mt-1.5 text-sm font-semibold text-ink">{v}</p>
               </div>
             ))}
           </div>
-          <div className="rounded-lg border border-border p-3">
-            <div className="mb-2 h-2 w-20 rounded bg-surface-page" />
+          <div className="rounded-lg border border-border bg-cosmic-void/40 p-3">
+            <div className="mb-2 h-2 w-20 rounded bg-ink-faint/40" />
             {[1, 2, 3].map((i) => (
               <div key={i} className="mb-2 flex items-center justify-between">
-                <div className="h-2 w-24 rounded bg-surface-page" />
-                <div className={`h-4 w-10 rounded-full ${i === 1 ? "bg-success-light" : "bg-surface-page"}`} />
+                <div className="h-2 w-24 rounded bg-ink-faint/40" />
+                <div className={`h-4 w-10 rounded-full ${i === 1 ? "bg-success-light" : "bg-ink-faint/25"}`} />
               </div>
             ))}
           </div>

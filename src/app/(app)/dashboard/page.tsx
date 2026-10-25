@@ -10,6 +10,7 @@ import { getTodayEntry } from "@/lib/journal/journal";
 import { todayInTimezone } from "@/lib/validation/age";
 import { summarizeStreakCard } from "@/lib/progress/dashboardStreakCard";
 import { computeAchievements } from "@/lib/progress/achievements";
+import { AchievementCelebration } from "@/components/cosmic/AchievementCelebration";
 
 interface PlanEntryRow {
   id: string;
@@ -55,6 +56,7 @@ export default async function DashboardPage() {
   const planDoneCount = planEntries.filter((e) => e.checkInStatus === "done").length;
 
   const streakStats = await getStreakStats();
+  const achievements = computeAchievements(streakStats.longest);
   const todayJournalEntry = await getTodayEntry();
 
   const todayLabel = today.toLocaleDateString(undefined, {
@@ -67,14 +69,16 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       {banner === "guardian-pending" && (
-        <div className="rounded-xl border border-warning/30 bg-warning-light p-4 text-sm text-ink">
+        <div className="rounded-xl border border-warning/30 bg-warning-light p-4 text-sm text-ink shadow-panel backdrop-blur-md">
           Waiting for your guardian ({profile.guardian?.email}) to approve your account.{" "}
-          <Link href="/profile" className="font-medium underline">Resend or update guardian info</Link>
+          <Link href="/profile" className="font-medium text-warning underline underline-offset-2">Resend or update guardian info</Link>
         </div>
       )}
 
       <div>
-        <h1 className="text-2xl font-semibold text-ink">Welcome back, {profile.name}</h1>
+        <h1 className="text-2xl font-semibold text-ink">
+          Welcome back, <span className="text-glow">{profile.name}</span>
+        </h1>
         <p className="mt-1 text-sm text-ink-muted">
           {todayLabel} · {profile.schoolName} · Grade {profile.grade} · {profile.curriculum}
         </p>
@@ -145,29 +149,49 @@ export default async function DashboardPage() {
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {profile.subjects.map((s) => (
-                  <li key={s.id} className="rounded-full bg-brand-light px-3 py-1 text-sm text-brand">{s.name}</li>
+                  <li key={s.id} className="rounded-full border border-brand/20 bg-brand-light px-3 py-1 text-sm text-brand">{s.name}</li>
                 ))}
               </ul>
             )}
           </Card>
 
-          <Card title="Progress">
-            <div className="flex flex-col gap-4">
-              <p className="text-sm text-ink">{summarizeStreakCard(streakStats)}</p>
+          <Card title="Progress" raised>
+            <div className="relative flex flex-col gap-4">
+              <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gold/10 blur-2xl" />
 
-              <div className="flex flex-col gap-2 text-xs text-ink-muted">
+              <div
+                className={`relative flex items-center gap-3 rounded-lg border border-border bg-cosmic-deep/40 px-4 py-3 ${
+                  streakStats.current > 0 ? "animate-pulse-glow" : ""
+                }`}
+              >
+                {streakStats.current > 0 && (
+                  <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5 shrink-0 text-gold" aria-hidden="true">
+                    <path
+                      d="M10 2c1 2.5-.5 3.5-1.5 5C7 8.5 6 10 6 12a4 4 0 0 0 8 0c0-1.2-.5-2-1-2.7.8 1.8-.2 3-1.2 3-1 0-1.3-.8-1-1.6.6-1.6-.2-2.8-1.4-4-.2 1 0 1.8-.4 2.3C8.4 9.4 8 10 8 11"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+                <p className="text-sm font-medium text-brand text-glow">{summarizeStreakCard(streakStats)}</p>
+              </div>
+
+              <div className="relative flex flex-col gap-2 text-xs text-ink-muted">
                 <div>Longest streak: <span className="font-semibold text-ink">{streakStats.longest}</span> days</div>
                 <div>Total active days: <span className="font-semibold text-ink">{streakStats.totalActiveDays}</span></div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {computeAchievements(streakStats.longest).map((achievement) => (
+              <div className="relative flex flex-wrap gap-2">
+                {achievements.map((achievement) => (
                   <span
                     key={achievement.days}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    title={achievement.unlocked ? `${achievement.days}-day streak unlocked` : `${achievement.days - streakStats.longest} more days to go`}
+                    className={`glow-interactive rounded-full border px-2.5 py-1 text-xs font-medium transition hover:scale-105 ${
                       achievement.unlocked
-                        ? "bg-warning-light text-warning"
-                        : "bg-surface-page text-ink-muted"
+                        ? "border-gold/30 bg-gold-light text-gold shadow-glow-gold"
+                        : "border-border bg-surface text-ink-faint"
                     }`}
                   >
                     {achievement.days}d
@@ -177,6 +201,8 @@ export default async function DashboardPage() {
             </div>
           </Card>
 
+          <AchievementCelebration achievements={achievements} />
+
           <Card title="Journal" action={{ href: "/journal", label: todayJournalEntry ? "Edit entry" : "Write entry" }}>
             <p className="text-sm text-ink-muted">
               {todayJournalEntry ? "You've written in your journal today." : "You haven't written in your journal today yet."}
@@ -185,13 +211,13 @@ export default async function DashboardPage() {
 
           <Card title="Quick actions">
             <div className="flex flex-col gap-2">
-              <Link href="/tasks" className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:border-brand hover:text-brand">
+              <Link href="/tasks" className="glow-interactive rounded-lg border border-border bg-cosmic-deep/40 px-3 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand">
                 + Add a task
               </Link>
-              <Link href="/journal" className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:border-brand hover:text-brand">
+              <Link href="/journal" className="glow-interactive rounded-lg border border-border bg-cosmic-deep/40 px-3 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand">
                 + Write in journal
               </Link>
-              <Link href="/progress" className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink transition hover:border-brand hover:text-brand">
+              <Link href="/progress" className="glow-interactive rounded-lg border border-border bg-cosmic-deep/40 px-3 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand">
                 View progress
               </Link>
             </div>
@@ -204,9 +230,9 @@ export default async function DashboardPage() {
 
 function StatTile({ label, value, hint, warn }: { label: string; value: string; hint: string; warn?: boolean }) {
   return (
-    <div className="rounded-xl border border-border bg-white p-4">
-      <p className="text-xs font-medium text-ink-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-ink">{value}</p>
+    <div className="panel-cosmic glow-interactive p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-brand text-glow tabular-nums">{value}</p>
       <p className={`mt-0.5 text-xs ${warn ? "text-warning" : "text-ink-muted"}`}>{hint}</p>
     </div>
   );
@@ -215,18 +241,23 @@ function StatTile({ label, value, hint, warn }: { label: string; value: string; 
 function Card({
   title,
   action,
+  raised,
   children,
 }: {
   title: string;
   action?: { href: string; label: string };
+  raised?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-white p-5">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-ink">{title}</h2>
+    <section className={`${raised ? "panel-cosmic-raised" : "panel-cosmic"} p-5`}>
+      <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink">{title}</h2>
         {action && (
-          <Link href={action.href} className="text-sm font-medium text-brand hover:underline">
+          <Link
+            href={action.href}
+            className="glow-interactive rounded-md px-2 py-1 text-sm font-medium text-brand hover:underline"
+          >
             {action.label}
           </Link>
         )}
@@ -237,18 +268,22 @@ function Card({
 }
 
 function EmptyState({ text }: { text: string }) {
-  return <p className="rounded-lg bg-surface-page px-4 py-6 text-center text-sm text-ink-muted">{text}</p>;
+  return (
+    <p className="rounded-lg border border-border bg-cosmic-deep/40 px-4 py-6 text-center text-sm text-ink-faint">
+      {text}
+    </p>
+  );
 }
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    pending: "bg-surface-page text-ink-muted",
-    done: "bg-success-light text-success",
-    partial: "bg-warning-light text-warning",
-    not_done: "bg-danger-light text-danger",
+    pending: "border-border bg-cosmic-deep/40 text-ink-muted",
+    done: "border-success/30 bg-success-light text-success",
+    partial: "border-warning/30 bg-warning-light text-warning",
+    not_done: "border-danger/30 bg-danger-light text-danger",
   };
   return (
-    <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${styles[status] ?? styles.pending}`}>
+    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${styles[status] ?? styles.pending}`}>
       {CHECKIN_LABEL[status] ?? status}
     </span>
   );
@@ -272,7 +307,7 @@ function TaskRow({
         <p className="text-xs text-ink-muted">{subject ?? "General"}</p>
       </div>
       {dueDate && (
-        <span className={`shrink-0 text-xs font-medium ${overdue ? "text-danger" : "text-ink-muted"}`}>
+        <span className={`shrink-0 text-xs font-medium tabular-nums ${overdue ? "text-danger" : "text-ink-muted"}`}>
           {dueDate.toLocaleDateString(undefined, { timeZone: "UTC", month: "short", day: "numeric" })}
         </span>
       )}

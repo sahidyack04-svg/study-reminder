@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { Starfield } from "@/components/cosmic/Starfield";
+import { Logo } from "@/components/cosmic/Logo";
 
 interface NavItem {
   href: string;
@@ -98,8 +100,10 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
             href={item.href}
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              active ? "bg-brand-light text-brand" : "text-ink-muted hover:bg-surface-page hover:text-ink"
+            className={`glow-interactive flex items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+              active
+                ? "border-brand/30 bg-brand-light text-brand shadow-glow"
+                : "border-transparent text-ink-muted hover:border-border hover:bg-surface hover:text-ink"
             }`}
           >
             <Icon className="h-5 w-5 shrink-0" />
@@ -117,23 +121,27 @@ export function AppShell({ studentName, children }: { studentName: string; child
   const currentLabel = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(item.href + "/"))?.label ?? "Study Reminder";
 
   return (
-    <div className="min-h-screen bg-surface-page">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow-md">
+    <div className="min-h-screen">
+      <Starfield intensity="ambient" />
+
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-surface-raised focus:px-4 focus:py-2 focus:text-ink focus:shadow-panel"
+      >
         Skip to content
       </a>
 
       <div className="mx-auto flex max-w-7xl">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-white px-4 py-6 lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 backdrop-blur-md lg:flex">
           <Link href="/dashboard" className="mb-8 flex items-center gap-2 px-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">SR</span>
-            <span className="text-base font-semibold text-ink">Study Reminder</span>
+            <Logo size={32} />
           </Link>
           <NavLinks pathname={pathname} />
           <div className="mt-auto flex flex-col gap-1 border-t border-border pt-4">
             <p className="truncate px-3 text-sm font-medium text-ink">{studentName}</p>
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="rounded-lg px-3 py-2 text-left text-sm text-ink-muted transition hover:bg-surface-page hover:text-ink"
+              className="glow-interactive rounded-lg px-3 py-2 text-left text-sm text-ink-muted transition hover:text-ink"
             >
               Sign out
             </button>
@@ -141,11 +149,11 @@ export function AppShell({ studentName, children }: { studentName: string; child
         </aside>
 
         <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-white px-4 py-3 lg:px-8">
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-surface px-4 py-3 backdrop-blur-md lg:px-8">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setMobileNavOpen(true)}
-                className="rounded-lg p-2 text-ink-muted hover:bg-surface-page lg:hidden"
+                className="glow-interactive rounded-lg p-2 text-ink-muted hover:text-ink lg:hidden"
                 aria-label="Open navigation menu"
               >
                 <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
@@ -160,18 +168,18 @@ export function AppShell({ studentName, children }: { studentName: string; child
           </header>
 
           <main id="main-content" className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
-            <div className="mx-auto max-w-5xl">{children}</div>
+            <div className="mx-auto max-w-5xl animate-fade-up">{children}</div>
           </main>
         </div>
       </div>
 
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-ink/30" onClick={() => setMobileNavOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-white px-4 py-6 shadow-xl">
+          <div className="absolute inset-0 bg-cosmic-void/70" onClick={() => setMobileNavOpen(false)} />
+          <div className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-border bg-surface-raised px-4 py-6 shadow-panel backdrop-blur-md">
             <div className="mb-8 flex items-center justify-between px-2">
-              <span className="text-base font-semibold text-ink">Study Reminder</span>
-              <button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation menu" className="rounded-lg p-1.5 text-ink-muted hover:bg-surface-page">
+              <Logo size={26} />
+              <button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation menu" className="glow-interactive rounded-lg p-1.5 text-ink-muted hover:text-ink">
                 <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
                   <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
@@ -182,7 +190,7 @@ export function AppShell({ studentName, children }: { studentName: string; child
               <p className="truncate px-3 text-sm font-medium text-ink">{studentName}</p>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="rounded-lg px-3 py-2 text-left text-sm text-ink-muted transition hover:bg-surface-page hover:text-ink"
+                className="glow-interactive rounded-lg px-3 py-2 text-left text-sm text-ink-muted transition hover:text-ink"
               >
                 Sign out
               </button>

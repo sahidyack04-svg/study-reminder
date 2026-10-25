@@ -34,8 +34,8 @@ export function JournalView({
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+    <div className="flex animate-fade-up flex-col gap-8">
+      <div className="panel-cosmic-raised p-6">
         <h2 className="mb-2 text-lg font-medium text-brand">Today</h2>
         <textarea
           placeholder="How was today? What did you study, how did it go?"
@@ -45,14 +45,14 @@ export function JournalView({
             setStatus("idle");
           }}
           rows={6}
-          className="w-full rounded-lg border border-border px-4 py-2"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40"
         />
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-        {status === "saved" && <p className="mt-2 text-sm text-green-700">Saved.</p>}
+        {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+        {status === "saved" && <p className="mt-2 text-sm text-success">Saved.</p>}
         <button
           onClick={handleSave}
           disabled={status === "saving"}
-          className="mt-3 rounded-full bg-brand px-6 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+          className="mt-3 rounded-lg bg-brand px-4 py-2 font-semibold text-cosmic-void shadow-glow transition hover:bg-brand-dark disabled:opacity-60"
         >
           {status === "saving" ? "Saving..." : "Save"}
         </button>
@@ -62,9 +62,9 @@ export function JournalView({
         <div className="flex flex-col gap-3">
           <h2 className="text-lg font-medium text-brand">Past entries</h2>
           {pastEntries.map((entry) => (
-            <div key={entry.id} className="rounded-xl bg-brand-light p-4">
-              <p className="mb-1 text-xs text-ink-muted">{formatUTCDate(entry.date)}</p>
-              <p className="whitespace-pre-wrap text-ink">{entry.content}</p>
+            <div key={entry.id} className="panel-cosmic p-4">
+              <p className="mb-1 text-xs font-medium text-ink-muted">{formatUTCDate(entry.date)}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{entry.content}</p>
             </div>
           ))}
         </div>
