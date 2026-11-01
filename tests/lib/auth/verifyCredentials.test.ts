@@ -29,7 +29,7 @@ describe("verifyCredentials", () => {
     expect(await verifyCredentials("nobody@example.test", "whatever123")).toBeNull();
   });
 
-  it("returns the user for an unverified account given the correct password - email verification is not required to sign in", async () => {
+  it("returns null for an unverified account even given the correct password - verification is required before first login", async () => {
     const hash = await bcrypt.hash("correct-horse-1", 12);
     (prisma.user.findUnique as any).mockResolvedValue({
       id: "u1",
@@ -37,10 +37,7 @@ describe("verifyCredentials", () => {
       passwordHash: hash,
       emailVerified: null,
     });
-    expect(await verifyCredentials("student@example.test", "correct-horse-1")).toEqual({
-      id: "u1",
-      email: "student@example.test",
-    });
+    expect(await verifyCredentials("student@example.test", "correct-horse-1")).toBeNull();
   });
 
   it("still returns null for an unverified account given the wrong password", async () => {

@@ -141,6 +141,8 @@ export default function LoginPage() {
             </form>
             <p className="relative mt-6 text-sm text-ink-muted">
               <Link href="/forgot-password" className="font-medium text-brand underline underline-offset-2 transition hover:text-brand-dark">Forgot your password?</Link>
+              {" · "}
+              <Link href="/verify-email" className="font-medium text-brand underline underline-offset-2 transition hover:text-brand-dark">Resend verification email</Link>
             </p>
             <p className="relative mt-2 text-sm text-ink-muted">
               Don&apos;t have an account? <Link href="/signup" className="font-medium text-brand underline underline-offset-2 transition hover:text-brand-dark">Create one</Link>

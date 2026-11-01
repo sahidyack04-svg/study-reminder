@@ -3,11 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     user: { findUnique: vi.fn(), create: vi.fn() },
+    verificationToken: { create: vi.fn() },
   },
 }));
+vi.mock("@/lib/email/send", () => ({ sendEmail: vi.fn() }));
 vi.mock("@/lib/security/rateLimit", () => ({ checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }) }));
 
 import { prisma } from "@/lib/db/prisma";
+import { sendEmail } from "@/lib/email/send";
 import { signupStudent } from "@/lib/auth/signup";
 
 describe("signupStudent", () => {
@@ -35,15 +38,39 @@ describe("signupStudent", () => {
     expect(result).toEqual({ success: false, error: "Something went wrong. Please try again." });
   });
 
-  it("creates a user immediately, with no email-verification step", async () => {
+  it("creates a user and sends a verification email", async () => {
     (prisma.user.findUnique as any).mockResolvedValue(null);
     (prisma.user.create as any).mockResolvedValue({ id: "u1", email: "a@example.test" });
+    (prisma.verificationToken.create as any).mockResolvedValue({ id: "t1" });
+    (sendEmail as any).mockResolvedValue({ delivered: true });
 
     const result = await signupStudent({ email: "a@example.test", password: "longenoughpassword1" });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, emailDelivered: true });
     expect(prisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ email: "a@example.test" }) }),
     );
+    expect(prisma.verificationToken.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ userId: "u1", purpose: "email_verify" }) }),
+    );
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "a@example.test",
+        subject: "Verify your Study Reminder account",
+        body: expect.stringContaining("/verify-email?token="),
+      }),
+    );
+  });
+
+  it("still creates the account and reports emailDelivered:false when the provider fails to deliver", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    (prisma.user.create as any).mockResolvedValue({ id: "u1", email: "a@example.test" });
+    (prisma.verificationToken.create as any).mockResolvedValue({ id: "t1" });
+    (sendEmail as any).mockResolvedValue({ delivered: false, reason: "no_provider" });
+
+    const result = await signupStudent({ email: "a@example.test", password: "longenoughpassword1" });
+
+    expect(result).toEqual({ success: true, emailDelivered: false });
+    expect(prisma.user.create).toHaveBeenCalled();
   });
 });

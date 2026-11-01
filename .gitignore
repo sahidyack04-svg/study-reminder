@@ -14,3 +14,4 @@ prisma/dev.db-journal
 .agents
 .claude
 skills-lock.json
+.neon

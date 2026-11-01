@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { signupStudent } from "@/lib/auth/signup";
+import { resendVerificationEmail } from "@/lib/auth/verifyEmail";
 import { Starfield } from "@/components/cosmic/Starfield";
 import { Logo } from "@/components/cosmic/Logo";
 
 export default function SignupPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "error" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [emailDelivered, setEmailDelivered] = useState(true);
+  const [resent, setResent] = useState(false);
 
   function handlePasswordChange(e: React.ChangeEvent<HTMLInputElement>) {
     setPassword(e.target.value);
@@ -44,19 +44,63 @@ export default function SignupPage() {
         return;
       }
 
-      // No email verification step - sign the new account in immediately.
-      const signInResult = await signIn("credentials", { email, password, redirect: false });
-      if (signInResult?.error) {
-        // Account was created but the automatic sign-in failed for some other reason
-        // (e.g. a rate limit) - send them to login rather than leaving them stuck.
-        router.push("/login");
-        return;
-      }
-      router.push("/dashboard");
+      setEmailDelivered(result.emailDelivered ?? true);
+      setStatus("sent");
     } catch {
       setStatus("error");
       setError("Something went wrong. Please try again.");
     }
+  }
+
+  async function handleResend() {
+    try {
+      await resendVerificationEmail(email);
+    } catch {
+      // resendVerificationEmail never throws; the UI stays identical either way.
+    }
+    setResent(true);
+  }
+
+  if (status === "sent") {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4 py-16">
+        <Starfield intensity="ambient" />
+        <div className="panel-cosmic-raised w-full max-w-md animate-burst-in p-8 text-center">
+          <Logo size={28} className="mx-auto mb-6 w-fit" />
+          {emailDelivered ? (
+            <>
+              <h1 className="text-glow mb-3 text-2xl font-semibold text-brand">Check your email</h1>
+              <p className="mb-6 text-ink-muted">
+                We&apos;ve sent a verification link to <strong className="text-ink">{email}</strong>. Click it to
+                activate your account, then sign in.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="mb-3 text-2xl font-semibold text-ink">Account created</h1>
+              <p className="mb-6 text-ink-muted">
+                Your account was created, but we couldn&apos;t send your verification email right now. Please try
+                resending it below, or contact support if this persists.
+              </p>
+            </>
+          )}
+          {resent ? (
+            <p className="text-sm text-ink-muted">If your account isn&apos;t verified yet, a new link is on its way.</p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResend}
+              className="glow-interactive mb-2 w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink transition hover:border-brand hover:text-brand"
+            >
+              Resend verification email
+            </button>
+          )}
+          <Link href="/login" className="mt-4 inline-block text-sm text-brand underline underline-offset-2 transition hover:text-brand-dark">
+            Back to login
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (
