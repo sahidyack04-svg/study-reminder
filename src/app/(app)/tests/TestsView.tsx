@@ -45,7 +45,12 @@ export function TestsView({
   return (
     <div className="flex animate-fade-up flex-col gap-6">
       <section className="panel-cosmic flex flex-col gap-4 p-6">
-        <h2 className="text-lg font-semibold text-ink">Start a new test</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-ink">Start a new test</h2>
+          <Link href="/questions" className="text-sm font-medium text-brand underline underline-offset-2 hover:text-brand-dark">
+            Manage question bank
+          </Link>
+        </div>
         {subjects.length === 0 ? (
           <p className="rounded-lg border border-border bg-cosmic-deep/40 px-4 py-6 text-center text-sm text-ink-faint">
             No subjects yet — add subjects and questions before starting a test.

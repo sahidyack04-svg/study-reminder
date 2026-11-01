@@ -70,6 +70,15 @@ function IconProgress({ className }: { className?: string }) {
   );
 }
 
+function IconAssessments({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path d="M5 3.5h10a1 1 0 0 1 1 1V17l-3-2-2 2-2-2-2 2-2-2-2 2V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M7.5 7.5l1.3 1.3L11.5 6.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function IconProfile({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
@@ -85,6 +94,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/tasks", label: "Tasks & homework", icon: IconTasks },
   { href: "/journal", label: "Journal", icon: IconJournal },
   { href: "/progress", label: "Progress", icon: IconProgress },
+  { href: "/tests", label: "Assessments", icon: IconAssessments },
   { href: "/profile", label: "Account", icon: IconProfile },
 ];
 
