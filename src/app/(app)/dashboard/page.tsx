@@ -6,6 +6,8 @@ import { getDashboardBannerState } from "@/lib/dashboard/bannerState";
 import { listTasks } from "@/lib/tasks/tasks";
 import { getOrGeneratePlanForDate } from "@/lib/plan/planService";
 import { getStreakStats } from "@/lib/progress/progressService";
+import { listTests } from "@/lib/assessments/testService";
+import { summarizeMostRecentTest } from "@/lib/assessments/dashboardCard";
 import { getTodayEntry } from "@/lib/journal/journal";
 import { todayInTimezone } from "@/lib/validation/age";
 import { summarizeStreakCard } from "@/lib/progress/dashboardStreakCard";
@@ -58,6 +60,7 @@ export default async function DashboardPage() {
   const streakStats = await getStreakStats();
   const achievements = computeAchievements(streakStats.longest);
   const todayJournalEntry = await getTodayEntry();
+  const tests = await listTests();
 
   const todayLabel = today.toLocaleDateString(undefined, {
     timeZone: "UTC",
@@ -203,6 +206,10 @@ export default async function DashboardPage() {
 
           <AchievementCelebration achievements={achievements} />
 
+          <Card title="Monthly tests" action={{ href: "/tests", label: "View tests" }}>
+            <p className="text-sm text-ink-muted">{summarizeMostRecentTest(tests)}</p>
+          </Card>
+
           <Card title="Journal" action={{ href: "/journal", label: todayJournalEntry ? "Edit entry" : "Write entry" }}>
             <p className="text-sm text-ink-muted">
               {todayJournalEntry ? "You've written in your journal today." : "You haven't written in your journal today yet."}
@@ -219,6 +226,9 @@ export default async function DashboardPage() {
               </Link>
               <Link href="/progress" className="glow-interactive rounded-lg border border-border bg-cosmic-deep/40 px-3 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand">
                 View progress
+              </Link>
+              <Link href="/tests" className="glow-interactive rounded-lg border border-border bg-cosmic-deep/40 px-3 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand">
+                + Start a test
               </Link>
             </div>
           </Card>
